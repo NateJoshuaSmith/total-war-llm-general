@@ -2,6 +2,14 @@
 
 Newest first.
 
+## 2026-10-31: Cursor builds and opens PRs, Claude Code reviews
+
+**Decision:** Each ticket is a GitHub issue. Cursor takes one issue end to end: branch, code, checks, commit, push, open PR. Claude Code reviews the PR and posts a verdict. Nathan merges.
+
+**Why:** The writer shouldn't review its own work, but every handoff between tools is a place to break. The earlier setup (a Cursor stop hook writing a marker file, a Claude Code listener polling for pushes, Nathan pushing by hand) had too many moving parts and only worked while a Claude Code session was open. Now the issue is the brief and the PR is the "done" signal, both of which live on GitHub.
+
+**Replaces:** the Cursor stop hook (`.cursor/hooks.json`) and the push listener.
+
 ## 2026-10-31: Layered (n-tier) Python package
 
 **Decision:** All Python lives in one package, `src/tw_general/`, split into layers:

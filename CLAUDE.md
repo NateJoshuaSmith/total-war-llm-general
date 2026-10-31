@@ -8,11 +8,11 @@ Full roadmap with diagrams (private link, Nathan's): https://claude.ai/artifact/
 
 ## Roles
 
-- **Nathan**: product owner. Runs the game and in-game tests on his Windows PC, makes product calls, pushes Cursor's branches, merges PRs.
-- **Cursor**: implementer. Writes most of the code on feature branches. Its `stop` hook signals when a run is done. It does not open PRs.
-- **Claude Code (you)**: senior engineer. You:
-  - Turn roadmap phases into small GitHub issues with clear acceptance criteria
-  - Watch for Cursor to finish, review its changes, run the tests, and open the PR once Nathan has pushed (see Review workflow)
+- **Nathan**: product owner. Runs the game and in-game tests on his Windows PC, makes product calls, starts each ticket in Cursor, merges PRs.
+- **Cursor**: builder. Takes one issue at a time, writes the code on a feature branch, runs the checks, commits, pushes, and opens the PR. Its workflow is in `.cursor/rules/workflow.mdc`.
+- **Claude Code (you)**: senior engineer and reviewer. You:
+  - Turn roadmap phases into small GitHub issues with clear acceptance criteria. The issue is Cursor's whole brief, so write it as one.
+  - Review every Cursor PR when Nathan asks (see Review workflow). You never write the code you review.
   - Own architecture decisions and record them in `docs/DECISIONS.md`
   - Keep this file, `docs/SPEC.md`, and the test/CI setup accurate
   - Write small fixes and test scaffolding when asked, but leave feature work to Cursor
@@ -107,7 +107,7 @@ scripts/              deploy.ps1 (copy built .pack into the game's data folder)
 docs/SPEC.md          What each piece must do
 docs/DECISIONS.md     Architecture decisions, newest first
 .github/workflows/    CI
-.cursor/hooks.json    Cursor stop hook that writes .cursor/agent-done.json
+.cursor/rules/        Cursor's workflow rules (issue → branch → checks → PR)
 ```
 
 ## Conventions
@@ -122,32 +122,21 @@ docs/DECISIONS.md     Architecture decisions, newest first
 
 ## Review workflow
 
-### Cursor done signal
-
-`.cursor/hooks.json` runs `.cursor/hooks/on-stop.ps1` whenever a Cursor agent run ends. The script writes `.cursor/agent-done.json` (gitignored):
-
-```json
-{ "status": "completed", "conversation_id": "...", "branch": "feat/3-spec", "head": "<sha>", "dirty": false, "finished_at": "<UTC ISO time>" }
-```
-
-`status` is `completed`, `aborted`, or `error`. Only `completed` starts a review.
-
-### Steps
-
-1. Nathan gives Cursor an issue, then asks you to watch for it.
-2. Delete any old `.cursor/agent-done.json`, then wait for a new one with the Monitor tool (an until-loop, e.g. `until [ -f .cursor/agent-done.json ]; do sleep 5; done`). You can only listen while a Claude Code session is open. If `status` isn't `completed`, tell Nathan and stop.
-3. Review the branch named in the marker against `main`:
+1. You write the ticket as a GitHub issue: goal, files/area, acceptance criteria (the exact checks that must pass), and what's out of scope.
+2. Nathan tells Cursor "do issue #N". Cursor follows `.cursor/rules/workflow.mdc`: branch, build, run checks, commit, push, open the PR with `Closes #N`.
+3. Nathan asks you to review PR #N. You run:
    ```
-   git diff main...<branch>
-   pytest && ruff check . && ruff format --check . && luacheck game/
+   gh pr view N
+   gh pr diff N
+   gh pr checks N
+   gh pr checkout N && ruff check . && ruff format --check . && lint-imports && pytest
    ```
-   If `dirty` is true, Cursor left uncommitted changes. Review those too and tell Nathan they aren't committed yet.
-4. Check whether Nathan has pushed: `git fetch origin`, then compare `git rev-parse <branch>` with `git rev-parse origin/<branch>`.
-   - **Not pushed, or the remote is behind:** report the review and test results to Nathan and stop. Never push for him.
-   - **Pushed and matching:** open the PR with `gh pr create --base main --head <branch>`, with a title from the issue and a body that starts with `Closes #<issue>`. If the verdict is **Changes requested** or tests fail, open it as `--draft`.
-   - Nathan has given standing permission to open PRs for any branch he has pushed, whether or not Cursor wrote it. Don't ask first. Nathan still does all commits, pushes, and merges. When he asks for git steps, give him the commands rather than running them.
-5. Post the review with `gh pr review N --comment -b "..."`. Start the comment with a verdict line: **Approve**, **Approve with nits**, or **Changes requested**, and include the test results. Use `--comment` rather than `--approve`, since everything runs under Nathan's GitHub account and GitHub won't let an account approve its own PR.
-6. Nathan merges once checks pass and the verdict is Approve.
+   Add `luacheck game/ && busted tests/lua` once Lua CI exists.
+4. Post the review with `gh pr review N --comment -b "..."`. Start the comment with a verdict line: **Approve**, **Approve with nits**, or **Changes requested**, and include the check results. Use `--comment` rather than `--approve`, since everything runs under Nathan's GitHub account and GitHub won't let an account approve its own PR.
+5. On **Changes requested**, Cursor fixes it on the same branch and Nathan asks you to review again.
+6. Nathan merges once CI is green and the verdict is Approve. Never merge on Changes requested.
+
+Your own doc changes (this file, `docs/`, `.cursor/rules/`): edit them, then give Nathan the git commands to branch, commit, and push. Nathan has given standing permission for you to open the PR once he has pushed.
 
 **Review checklist:**
 
@@ -188,8 +177,10 @@ From Phase 1 on, save real state files from battles into `tests/fixtures/`. That
 
 ## First tickets
 
-1. Repo skeleton: folders, `.gitignore`, `requirements.txt`, `pyproject.toml` with ruff and pytest config, placeholder tests, `ci.yml` passing on the empty project. Do this first so every later PR is checked.
-2. `.cursor/rules` file that mirrors the conventions and checklist above, so Cursor follows them.
-3. `docs/SPEC.md` for Phase 0 and Phase 1.
-4. Phase 0 manual checklist for Nathan: install RPFM, open Napoleon's packs, find the historical battle scripts, get a hello-world line into lua.log, test `io.open`, test reloading with `system.ClearRequiredFiles()`.
-5. Phase 0 spike: a minimal Lua script that prints unit count and positions on a repeating timer, plus a Python script that reads them and sends one move order back.
+1. Python skeleton + CI: layered package, `pyproject.toml` (ruff, pytest, import-linter), `requirements.txt`, placeholder tests, `ci.yml` passing on the empty project. Do this first so every later PR is checked.
+2. Phase 0 manual checklist for Nathan: install RPFM, open Napoleon's packs, find the historical battle scripts, get a hello-world line into lua.log, test `io.open`, test reloading with `system.ClearRequiredFiles()`. Do this before more scaffolding: if `io` is blocked, the plan changes.
+3. Phase 0 spike: a minimal Lua script that prints unit count and positions on a repeating timer, plus a Python script that reads them and sends one move order back.
+4. Lua CI job (luacheck + busted), pinned to the Lua version Phase 0 finds.
+5. `docs/SPEC.md` for Phase 0 and Phase 1.
+
+Done: `.cursor/rules/workflow.mdc`.
