@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tw-general"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = ["live: calls the real Claude API (manual only)"]
+addopts = '-m "not live"'
+
+[tool.importlinter]
+root_package = "tw_general"
+
+[[tool.importlinter.contracts]]
+name = "Layered layout"
+type = "layers"
+layers = [
+    "tw_general.main",
+    "tw_general.controllers",
+    "tw_general.services",
+    "tw_general.repositories | tw_general.clients",
+    "tw_general.models",
+]
