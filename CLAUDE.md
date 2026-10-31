@@ -75,7 +75,7 @@ We move on when the gate passes, not on a date.
 - Python 3.12 outside the game, Lua inside. Files are the only interface.
 - `claude-haiku-5-5` for the fast loop, `claude-sonnet-5-5` for stronger tactics or a slower plan-setting layer. Haiku 5.5 rejects `temperature` and assistant prefill, so use structured outputs for orders. Keep prompts well under 100K tokens (Haiku's price jumps above that).
 - Prompt display has three modes on one hotkey: **Off**, **Plan only** (one-line plan via the in-game advisor window), **Full** (local web viewer). Every prompt and reply is always logged to a file, whatever the mode.
-- Tactics come from a short written playbook (`brain/playbook.md`) plus real unit stats from the game's data tables, improved from battle logs. No fine-tuning.
+- Tactics come from a short written playbook (`src/tw_general/prompts/playbook.md`) plus real unit stats from the game's data tables, improved from battle logs. No fine-tuning.
 
 ## Open decisions (ask Nathan)
 
@@ -85,14 +85,23 @@ We move on when the gate passes, not on a date.
 
 ## Repo layout
 
+The Python side is layered (n-tier). See `docs/DECISIONS.md` for why.
+
 ```
-game/napoleon/        Lua battle script + pack build notes
+src/tw_general/
+  controllers/        Entry points, kept thin: bridge tick loop, viewer HTTP/websocket routes
+  services/           All logic: report builder, prompt builder, order validator, cost cap, tick orchestration
+  repositories/       File I/O: read state file, write orders file, write prompt/reply log
+  clients/            External APIs: Claude client
+  models/             Pydantic models: battle state, unit, order, plan
+  prompts/            playbook.md and prompt templates
+  main.py             Wires the layers together and starts the loop
+game/napoleon/        Lua battle script + pack build notes (flat, not layered)
 game/empire/          Port, later
-bridge/               File watcher, state parser, order writer
-brain/                Prompt builder, Claude client, order schema, playbook.md
-viewer/               Live prompt/reply page (FastAPI + websocket)
 eval/                 Test battle list + results log
-tests/                pytest suites; tests/fixtures/ holds recorded state files
+tests/unit/           pytest, one folder per layer (services/, repositories/, ...)
+tests/integration/    Fake game + mocked Claude client, full tick
+tests/fixtures/       Recorded state files from real battles
 tests/lua/            busted specs for pure Lua functions
 scripts/              deploy.ps1 (copy built .pack into the game's data folder)
 docs/SPEC.md          What each piece must do
@@ -104,6 +113,8 @@ docs/DECISIONS.md     Architecture decisions, newest first
 ## Conventions
 
 - Python: type hints, Pydantic models for state and orders, `ruff` for lint and format.
+- Layers only import downward: controllers → services → repositories/clients → models. Models import nothing from the project. `import-linter` enforces this in CI.
+- Services get their repositories and clients passed in (constructor arguments), so tests can hand them fakes. No DI framework.
 - Lua: keep the in-game side tiny. Wrap every tick in `pcall` so a script error never kills the battle. Log every tick with `battle:print`. Set `luacheck` to the game's Lua version once Phase 0 confirms it.
 - Never commit game files, `.pack` files, `.env`, or API keys.
 - One ticket per PR, small diffs. Branches: `feat/<issue>-short-name`, `fix/...`.
@@ -134,6 +145,7 @@ docs/DECISIONS.md     Architecture decisions, newest first
 4. Check whether Nathan has pushed: `git fetch origin`, then compare `git rev-parse <branch>` with `git rev-parse origin/<branch>`.
    - **Not pushed, or the remote is behind:** report the review and test results to Nathan and stop. Never push for him.
    - **Pushed and matching:** open the PR with `gh pr create --base main --head <branch>`, with a title from the issue and a body that starts with `Closes #<issue>`. If the verdict is **Changes requested** or tests fail, open it as `--draft`.
+   - Nathan has given standing permission to open PRs for any branch he has pushed, whether or not Cursor wrote it. Don't ask first. Nathan still does all commits, pushes, and merges. When he asks for git steps, give him the commands rather than running them.
 5. Post the review with `gh pr review N --comment -b "..."`. Start the comment with a verdict line: **Approve**, **Approve with nits**, or **Changes requested**, and include the test results. Use `--comment` rather than `--approve`, since everything runs under Nathan's GitHub account and GitHub won't let an account approve its own PR.
 6. Nathan merges once checks pass and the verdict is Approve.
 
