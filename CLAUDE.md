@@ -8,11 +8,11 @@ Full roadmap with diagrams (private link, Nathan's): https://claude.ai/artifact/
 
 ## Roles
 
-- **Nathan**: product owner. Runs the game and in-game tests on his Windows PC, makes product calls, merges PRs.
-- **Cursor**: implementer. Writes most of the code on feature branches and opens PRs.
+- **Nathan**: product owner. Runs the game and in-game tests on his Windows PC, makes product calls, pushes Cursor's branches, merges PRs.
+- **Cursor**: implementer. Writes most of the code on feature branches. Its `stop` hook signals when a run is done. It does not open PRs.
 - **Claude Code (you)**: senior engineer. You:
   - Turn roadmap phases into small GitHub issues with clear acceptance criteria
-  - Review every Cursor PR before Nathan merges it
+  - Watch for Cursor to finish, review its changes, run the tests, and open the PR once Nathan has pushed (see Review workflow)
   - Own architecture decisions and record them in `docs/DECISIONS.md`
   - Keep this file, `docs/SPEC.md`, and the test/CI setup accurate
   - Write small fixes and test scaffolding when asked, but leave feature work to Cursor
@@ -98,6 +98,7 @@ scripts/              deploy.ps1 (copy built .pack into the game's data folder)
 docs/SPEC.md          What each piece must do
 docs/DECISIONS.md     Architecture decisions, newest first
 .github/workflows/    CI
+.cursor/hooks.json    Cursor stop hook that writes .cursor/agent-done.json
 ```
 
 ## Conventions
@@ -110,17 +111,31 @@ docs/DECISIONS.md     Architecture decisions, newest first
 
 ## Review workflow
 
-1. Cursor works on a branch and opens a PR that references its issue.
-2. Nathan asks you to review PR #N.
-3. You run:
+### Cursor done signal
+
+`.cursor/hooks.json` runs `.cursor/hooks/on-stop.ps1` whenever a Cursor agent run ends. The script writes `.cursor/agent-done.json` (gitignored):
+
+```json
+{ "status": "completed", "conversation_id": "...", "branch": "feat/3-spec", "head": "<sha>", "dirty": false, "finished_at": "<UTC ISO time>" }
+```
+
+`status` is `completed`, `aborted`, or `error`. Only `completed` starts a review.
+
+### Steps
+
+1. Nathan gives Cursor an issue, then asks you to watch for it.
+2. Delete any old `.cursor/agent-done.json`, then wait for a new one with the Monitor tool (an until-loop, e.g. `until [ -f .cursor/agent-done.json ]; do sleep 5; done`). You can only listen while a Claude Code session is open. If `status` isn't `completed`, tell Nathan and stop.
+3. Review the branch named in the marker against `main`:
    ```
-   gh pr view N
-   gh pr diff N
-   gh pr checks N
-   gh pr checkout N && pytest && ruff check . && luacheck game/
+   git diff main...<branch>
+   pytest && ruff check . && ruff format --check . && luacheck game/
    ```
-4. Post the review with `gh pr review N --comment -b "..."`. Start the comment with a verdict line: **Approve**, **Approve with nits**, or **Changes requested**. Use `--comment` rather than `--approve`, since everything runs under Nathan's GitHub account and GitHub won't let an account approve its own PR.
-5. Nathan merges once checks pass and the verdict is Approve.
+   If `dirty` is true, Cursor left uncommitted changes. Review those too and tell Nathan they aren't committed yet.
+4. Check whether Nathan has pushed: `git fetch origin`, then compare `git rev-parse <branch>` with `git rev-parse origin/<branch>`.
+   - **Not pushed, or the remote is behind:** report the review and test results to Nathan and stop. Never push for him.
+   - **Pushed and matching:** open the PR with `gh pr create --base main --head <branch>`, with a title from the issue and a body that starts with `Closes #<issue>`. If the verdict is **Changes requested** or tests fail, open it as `--draft`.
+5. Post the review with `gh pr review N --comment -b "..."`. Start the comment with a verdict line: **Approve**, **Approve with nits**, or **Changes requested**, and include the test results. Use `--comment` rather than `--approve`, since everything runs under Nathan's GitHub account and GitHub won't let an account approve its own PR.
+6. Nathan merges once checks pass and the verdict is Approve.
 
 **Review checklist:**
 
