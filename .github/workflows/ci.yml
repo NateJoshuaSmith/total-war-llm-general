@@ -40,9 +40,9 @@ jobs:
 
       - uses: leafo/gh-actions-luarocks@v6
 
-      - run: luarocks install luacheck
+      - run: luarocks install luacheck 1.2.0-1
 
-      - run: luarocks install busted
+      - run: luarocks install busted 2.3.0-1
 
       - run: luacheck game/
 
