@@ -143,6 +143,27 @@ describe("twllm_parse_orders", function()
     assert_rejected(insert_before_end(fixture, "hello"))
   end)
 
+  it("parses when math.huge and math.floor are missing", function()
+    local saved_huge = math.huge
+    local saved_floor = math.floor
+    math.huge = nil
+    math.floor = nil
+    local ok, err = pcall(function()
+      dofile("game/napoleon/lodi_battle.battle_script")
+      local order, reason = twllm_parse_orders(fixture)
+      assert.is_nil(reason)
+      assert.are.equal(1730400000000, order.seq)
+      assert.is_true(order.run)
+      assert_rejected(replace_value(fixture, "x", "inf"))
+      assert_rejected(replace_value(fixture, "x", "nan"))
+      assert_rejected(replace_value(fixture, "unit", "1.5"))
+      assert_rejected(replace_value(fixture, "seq", "-3"))
+    end)
+    math.huge = saved_huge
+    math.floor = saved_floor
+    if not ok then error(err, 0) end
+  end)
+
   it("rejects text over 4096 bytes", function()
     local text = "seq=1\nunit=1\nx=0\nz=0\nrun=1\nfoo=" .. string.rep("a", 5000) .. "\nend\n"
     assert.is_true(#text > 4096)
