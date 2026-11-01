@@ -1,1 +1,2 @@
 tests/fixtures/orders_example.txt text eol=lf
+tests/fixtures/orders_release_example.txt text eol=lf

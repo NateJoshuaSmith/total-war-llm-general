@@ -1,8 +1,8 @@
 -- Lodi battle script. Pack path:
 --   napoleon_historical_battles\lodi\lodi_battle.battle_script
--- A new seq in twllm_orders.txt moves one Austrian unit. Every tick rewrites
--- twllm_state.txt. TWLLM_TEST loads the parser and returns before the game,
--- the log, or any other file is touched.
+-- A new seq in twllm_orders.txt moves one Austrian unit, or hands it back to
+-- the game's AI. Every tick rewrites twllm_state.txt. TWLLM_TEST loads the
+-- parser and returns before the game, the log, or any other file is touched.
 
 local ORDERS_PATH = "twllm_orders.txt"
 local STATE_PATH = "twllm_state.txt"
@@ -52,24 +52,38 @@ function twllm_parse_orders(text)
     if not key then return nil, "bad line" end
     values[key] = value
   end
+  local action = "move"
+  if values.action ~= nil then
+    action = values.action:match("^%s*(.-)%s*$")
+  end
+  if action ~= "move" and action ~= "release" then return nil, "bad action" end
+
   local parsed = {}
-  for _, key in ipairs({ "seq", "unit", "x", "z", "run" }) do
+  local keys = { "seq", "unit" }
+  if action == "move" then
+    keys = { "seq", "unit", "x", "z", "run" }
+  end
+  for _, key in ipairs(keys) do
     if values[key] == nil then return nil, "missing " .. key end
     parsed[key] = finite_number(values[key])
     if parsed[key] == nil then return nil, "bad " .. key end
   end
   if parsed.seq % 1 ~= 0 or parsed.seq < 1 then return nil, "bad seq" end
   if parsed.unit % 1 ~= 0 or parsed.unit < 1 then return nil, "bad unit" end
-  if parsed.run ~= 0 and parsed.run ~= 1 then return nil, "bad run" end
+  if action == "move" and parsed.run ~= 0 and parsed.run ~= 1 then return nil, "bad run" end
   local seq_text = values.seq:match("^%s*(.-)%s*$")
-  return {
+  local order = {
     seq = parsed.seq,
     seq_text = seq_text,
     unit = parsed.unit,
-    x = parsed.x,
-    z = parsed.z,
-    run = (parsed.run == 1),
+    action = action,
   }
+  if action == "move" then
+    order.x = parsed.x
+    order.z = parsed.z
+    order.run = (parsed.run == 1)
+  end
+  return order
 end
 
 local function read_orders()
@@ -129,6 +143,18 @@ local function apply_order()
   if order.unit > count then
     log("order seq=" .. order.seq_text .. " unit " .. order.unit
       .. " is out of range (" .. tostring(count) .. " units)")
+    return
+  end
+
+  if order.action == "release" then
+    local controller = controllers[order.unit]
+    if controller == nil then
+      log("unit " .. order.unit .. " not under our control")
+      return
+    end
+    controller:release_control()
+    controllers[order.unit] = nil
+    log("released unit " .. order.unit)
     return
   end
 

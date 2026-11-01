@@ -10,11 +10,16 @@ _DEFAULT_GAME_DIR = Path(r"D:\SteamLibrary\steamapps\common\Napoleon Total War")
 
 
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Write one move order for the Lodi battle script.")
+    parser = argparse.ArgumentParser(description="Write one order for the Lodi battle script.")
     parser.add_argument("--unit", type=int, required=True)
-    parser.add_argument("--x", type=float, required=True)
-    parser.add_argument("--z", type=float, required=True)
+    parser.add_argument("--x", type=float)
+    parser.add_argument("--z", type=float)
     parser.add_argument("--walk", action="store_true", help="Walk. The default is to run.")
+    parser.add_argument(
+        "--release",
+        action="store_true",
+        help="Hand the unit back to the game's AI. Only --unit is needed.",
+    )
     parser.add_argument(
         "--game-dir",
         default=None,
@@ -33,13 +38,23 @@ def _game_dir(argument: str | None) -> Path:
 
 
 def main(argv: list[str] | None = None) -> None:
-    args = _parser().parse_args(argv)
+    parser = _parser()
+    args = parser.parse_args(argv)
     game_dir = _game_dir(args.game_dir)
     if not game_dir.is_dir():
         print(f"Game directory does not exist: {game_dir}", file=sys.stderr)
         raise SystemExit(2)
 
-    order = OrderService(OrdersFileRepository(game_dir / "twllm_orders.txt")).send_move(
+    service = OrderService(OrdersFileRepository(game_dir / "twllm_orders.txt"))
+    if args.release:
+        order = service.send_release(args.unit)
+        print(f"Sent order {order.seq}: released unit {order.unit}. Lua picks it up within 3 s.")
+        return
+
+    if args.x is None or args.z is None:
+        parser.error("--x and --z are required unless --release is set")
+
+    order = service.send_move(
         args.unit,
         args.x,
         args.z,

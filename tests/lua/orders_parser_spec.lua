@@ -4,8 +4,8 @@ dofile("game/napoleon/lodi_battle.battle_script")
 
 local napoleon_env = dofile("tests/lua/napoleon_env.lua")
 
-local function read_fixture()
-  local handle = assert(io.open("tests/fixtures/orders_example.txt", "rb"))
+local function read_text(path)
+  local handle = assert(io.open(path, "rb"))
   local text = handle:read("*a")
   handle:close()
   return text
@@ -53,7 +53,8 @@ local function assert_rejected(text)
   return reason
 end
 
-local fixture = read_fixture()
+local fixture = read_text("tests/fixtures/orders_example.txt")
+local release_fixture = read_text("tests/fixtures/orders_release_example.txt")
 
 describe("twllm_parse_orders", function()
   it("parses the fixture", function()
@@ -65,6 +66,7 @@ describe("twllm_parse_orders", function()
     assert.are.equal(536.0, order.x)
     assert.are.equal(363.0, order.z)
     assert.is_true(order.run)
+    assert.are.equal("move", order.action)
   end)
 
   it("parses CRLF line endings", function()
@@ -180,5 +182,35 @@ describe("twllm_parse_orders", function()
     local text = "seq=1\nunit=1\nx=0\nz=0\nrun=1\nfoo=" .. string.rep("a", 5000) .. "\nend\n"
     assert.is_true(#text > 4096)
     assert_rejected(text)
+  end)
+
+  it("parses a release order", function()
+    local order, reason = twllm_parse_orders(release_fixture)
+    assert.is_nil(reason)
+    assert.are.equal("release", order.action)
+    assert.are.equal("1793600000000", order.seq_text)
+    assert.are.equal(1, order.unit)
+    assert.is_nil(order.x)
+    assert.is_nil(order.z)
+    assert.is_nil(order.run)
+  end)
+
+  it("ignores coordinates on a release order", function()
+    local order, reason = twllm_parse_orders(
+      "seq=1\nunit=1\naction=release\nx=abc\nz=nope\nrun=9\nend\n")
+    assert.is_nil(reason)
+    assert.are.equal("release", order.action)
+    assert.is_nil(order.x)
+  end)
+
+  it("rejects action=attack", function()
+    assert.are.equal("bad action", assert_rejected(insert_before_end(fixture, "action=attack")))
+  end)
+
+  it("still needs x, z and run when action is move", function()
+    local named = insert_before_end(fixture, "action=move")
+    assert_rejected(drop_key(named, "x"))
+    assert_rejected(drop_key(named, "z"))
+    assert_rejected(drop_key(named, "run"))
   end)
 end)
