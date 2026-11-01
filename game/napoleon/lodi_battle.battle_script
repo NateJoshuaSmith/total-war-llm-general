@@ -8,7 +8,7 @@ local ORDERS_PATH = "twllm_orders.txt"
 local STATE_PATH = "twllm_state.txt"
 local LOG_PATH = "twllm_bridge_log.txt"
 local MAX_ORDER_BYTES = 4096
-local last_seq, tick_count, last_reason = 0, 0, nil
+local last_seq, tick_count, last_reason, last_tick_error = 0, 0, nil, nil
 local controllers = {}
 
 local function log(message)
@@ -27,7 +27,8 @@ end
 
 local function finite_number(raw)
   local n = tonumber(raw)
-  if n == nil or n ~= n or n == math.huge or n == -math.huge then
+  -- n - n is 0 for a real number, and not 0 for NaN or infinity.
+  if n == nil or n - n ~= 0 then
     return nil
   end
   return n
@@ -57,8 +58,8 @@ function twllm_parse_orders(text)
     parsed[key] = finite_number(values[key])
     if parsed[key] == nil then return nil, "bad " .. key end
   end
-  if math.floor(parsed.seq) ~= parsed.seq or parsed.seq < 1 then return nil, "bad seq" end
-  if math.floor(parsed.unit) ~= parsed.unit or parsed.unit < 1 then return nil, "bad unit" end
+  if parsed.seq % 1 ~= 0 or parsed.seq < 1 then return nil, "bad seq" end
+  if parsed.unit % 1 ~= 0 or parsed.unit < 1 then return nil, "bad unit" end
   if parsed.run ~= 0 and parsed.run ~= 1 then return nil, "bad run" end
   return {
     seq = parsed.seq,
@@ -147,13 +148,19 @@ local function apply_order()
   controller:goto_location(target, order.run)
 end
 
+local function log_tick_error(err)
+  local text = tostring(err)
+  if text == last_tick_error then return end
+  last_tick_error = text
+  log("tick ERR: " .. text)
+end
+
 function twllm_tick()
-  local ok, err = pcall(function()
-    tick_count = tick_count + 1
-    apply_order()
-    write_state()
-  end)
-  if not ok then log("tick ERR: " .. tostring(err)) end
+  tick_count = tick_count + 1
+  local ok_order, err_order = pcall(apply_order)
+  if not ok_order then log_tick_error(err_order) end
+  local ok_state, err_state = pcall(write_state)
+  if not ok_state then log_tick_error(err_state) end
 end
 
 local function note_baseline()
@@ -184,6 +191,15 @@ end
 if TWLLM_TEST then return end
 
 log("lodi battle script loaded")
+log("lua libs: math.floor=" .. type(math.floor)
+  .. " math.huge=" .. type(math.huge)
+  .. " string.gmatch=" .. type(string.gmatch)
+  .. " string.match=" .. type(string.match)
+  .. " string.gsub=" .. type(string.gsub)
+  .. " string.format=" .. type(string.format)
+  .. " table.concat=" .. type(table.concat)
+  .. " os.date=" .. type(os.date)
+  .. " io.open=" .. type(io.open))
 battle = nil
 local ok_battle, err_battle = pcall(function() battle = empire_battle:new() end)
 log("empire_battle:new() ok=" .. tostring(ok_battle) .. " " .. tostring(err_battle or ""))
