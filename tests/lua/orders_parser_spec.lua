@@ -57,6 +57,7 @@ describe("twllm_parse_orders", function()
     local order, reason = twllm_parse_orders(fixture)
     assert.is_nil(reason)
     assert.are.equal(1730400000000, order.seq)
+    assert.are.equal("1730400000000", order.seq_text)
     assert.are.equal(1, order.unit)
     assert.are.equal(536.0, order.x)
     assert.are.equal(363.0, order.z)
@@ -143,6 +144,17 @@ describe("twllm_parse_orders", function()
     assert_rejected(insert_before_end(fixture, "hello"))
   end)
 
+  it("keeps seq text that a short float would round together", function()
+    local function with_seq(seq)
+      return "seq=" .. seq .. "\nunit=1\nx=1\nz=1\nrun=1\nend\n"
+    end
+    local first = twllm_parse_orders(with_seq("1793506662635"))
+    local second = twllm_parse_orders(with_seq("1793506672640"))
+    assert.are.equal("1793506662635", first.seq_text)
+    assert.are.equal("1793506672640", second.seq_text)
+    assert.is_true(first.seq_text ~= second.seq_text)
+  end)
+
   it("parses when math.huge and math.floor are missing", function()
     local saved_huge = math.huge
     local saved_floor = math.floor
@@ -153,6 +165,7 @@ describe("twllm_parse_orders", function()
       local order, reason = twllm_parse_orders(fixture)
       assert.is_nil(reason)
       assert.are.equal(1730400000000, order.seq)
+      assert.are.equal("1730400000000", order.seq_text)
       assert.is_true(order.run)
       assert_rejected(replace_value(fixture, "x", "inf"))
       assert_rejected(replace_value(fixture, "x", "nan"))
