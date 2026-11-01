@@ -20,8 +20,30 @@ Read `CLAUDE.md` and `docs/DECISIONS.md` before starting. They are the source of
    - `pytest`
    - `luacheck game/` and `busted tests/lua` (once Lua CI exists)
 6. Commit with a clear message, then `git push -u origin <branch>`.
-7. Open the PR: `gh pr create --base main --title "<issue title>" --body "..."`. The body starts with `Closes #N`, then a short summary of what changed, then the output of the checks from step 5.
+7. Open the PR: `gh pr create --base main --title "<issue title>" --body "..."`. Write the body in the format under "PR descriptions" below.
 8. Tell Nathan the PR number and stop. Claude Code reviews it.
+
+## PR descriptions
+
+Nathan reads every PR and is new to modding and git. Write for him, not for a reviewer. Plain English, short sentences, no wall of file names or code. Use this shape and keep the whole body under about 25 lines:
+
+```
+Closes #N
+
+**What this does:** one or two sentences a non-programmer understands. Say what now works, not how.
+
+**What changed**
+- 3–5 short bullets, one per piece (e.g. "Python can now write an order for the game")
+
+**Checks:** ruff ✅ · format ✅ · lint-imports ✅ · pytest ✅ (19 passed) · busted ✅/not run (say why in one line)
+
+**How to test in game** (only if the issue has an in-game checklist)
+1. Short numbered steps, copied from the issue
+```
+
+- Put each check on one line with its result. Don't paste raw tool output unless a check failed.
+- Leave out implementation details (function names, retry counts, parsing rules). The diff and the reviewer cover those.
+- If something didn't work or was skipped, say so plainly in one line.
 
 ## When the review says Changes requested
 
