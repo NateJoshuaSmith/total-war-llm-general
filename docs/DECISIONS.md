@@ -2,6 +2,14 @@
 
 Newest first.
 
+## 2026-10-31: Orders file is `key=value` lines ending in `end`
+
+**Decision:** Python and Lua exchange orders through `twllm_orders.txt` in the game root: one `key=value` per line, last line `end`. Keys for Phase 0: `seq`, `unit`, `x`, `z`, `run`. Lua ignores unknown keys, so we can add keys later without breaking old scripts. Python writes it atomically (temp file + rename). The state file `twllm_state.txt` uses the same style.
+
+**Why:** Lua 5.1 has no JSON library and the in-game side has to stay tiny. This format parses with `string.match` and `tonumber`, and the `end` line plus `seq` let Lua ignore half-written, stale and repeated files.
+
+**Replaces:** nothing.
+
 ## 2026-10-31: Cursor builds and opens PRs, Claude Code reviews
 
 **Decision:** Each ticket is a GitHub issue. Cursor takes one issue end to end: branch, code, checks, commit, push, open PR. Claude Code reviews the PR and posts a verdict. Nathan merges.
