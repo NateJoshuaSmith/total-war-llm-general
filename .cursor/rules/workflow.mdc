@@ -18,7 +18,7 @@ Read `CLAUDE.md` and `docs/DECISIONS.md` before starting. They are the source of
    - `ruff format --check .`
    - `lint-imports`
    - `pytest`
-   - `luacheck game/` and `busted tests/lua` (once Lua CI exists)
+   - `luacheck game/` and `busted tests/lua`
 6. Commit with a clear message, then `git push -u origin <branch>`.
 7. Open the PR: `gh pr create --base main --title "<issue title>" --body "..."`. Write the body in the format under "PR descriptions" below.
 8. Tell Nathan the PR number and stop. Claude Code reviews it.
