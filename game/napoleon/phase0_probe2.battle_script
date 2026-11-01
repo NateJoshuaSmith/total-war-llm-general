@@ -1,0 +1,115 @@
+-- ===== TWLLM Phase 0 probe 2 (temporary) =====
+-- Replaces the Battle of Lodi's script. Save as:
+--   <Napoleon>/data/battles/lodi/lodi_battle.battle_script
+-- Delete that loose file to put Lodi back to normal.
+--
+-- Tests: does a loose file override the pack? Can we read every unit? Do timers tick?
+-- Can a script take control of one enemy unit and move it?
+-- Writes everything to twllm_probe2.txt in the game folder. Every step is in pcall.
+
+local LOG = "twllm_probe2.txt"
+
+local function log(s)
+  pcall(function()
+    local f = io.open(LOG, "a")
+    f:write(os.date("%H:%M:%S"), " ", tostring(s), "\n")
+    f:close()
+  end)
+end
+
+-- Call obj:method() safely; returns the result or "ERR: ...".
+local function try(obj, method, ...)
+  local ok, result = pcall(function(...) return obj[method](obj, ...) end, ...)
+  if ok then return result end
+  return "ERR: " .. tostring(result)
+end
+
+pcall(function() io.open(LOG, "w"):close() end)
+log("probe 2 loaded: loose battle_script override works")
+
+-- Globals on purpose: the game looks up timer and phase callbacks by name.
+battle = nil
+twllm_ticks = 0
+twllm_controller = nil
+
+local ok_battle, err_battle = pcall(function() battle = empire_battle:new() end)
+log("empire_battle:new() ok=" .. tostring(ok_battle) .. " " .. tostring(err_battle or ""))
+
+local function enemy_unit()
+  return battle:alliances():item(2):armies():item(1):units():item(1)
+end
+
+local function dump_units()
+  local alliances = battle:alliances()
+  log("alliances: " .. tostring(alliances:count()))
+  for a = 1, alliances:count() do
+    local armies = alliances:item(a):armies()
+    for r = 1, armies:count() do
+      local units = armies:item(r):units()
+      log(string.format("alliance %d army %d: %d units", a, r, units:count()))
+      for i = 1, units:count() do
+        local ok, line = pcall(function()
+          local u = units:item(i)
+          local p = u:position()
+          return string.format(
+            "  unit %d men=%s/%s pos=(%.1f, %.1f, %.1f) bearing=%s cav=%s inf=%s art=%s routing=%s idle=%s ammo=%s",
+            i, tostring(try(u, "number_of_men_alive")), tostring(try(u, "initial_number_of_men")),
+            p:get_x(), p:get_y(), p:get_z(), tostring(try(u, "bearing")),
+            tostring(try(u, "is_cavalry")), tostring(try(u, "is_infantry")),
+            tostring(try(u, "is_artillery")), tostring(try(u, "is_routing")),
+            tostring(try(u, "is_idle")), tostring(try(u, "ammo_left")))
+        end)
+        log(ok and line or ("  unit " .. i .. " ERR: " .. tostring(line)))
+      end
+    end
+  end
+end
+
+local function move_enemy_unit()
+  local u = enemy_unit()
+  twllm_controller = battle:alliances():item(2):armies():item(1):create_unit_controller()
+  twllm_controller:add_units(u)
+  log("take_control: " .. tostring(try(twllm_controller, "take_control")))
+
+  local p = u:position()
+  local target = battle_vector:new()
+  target:set(p:get_x() + 80, p:get_y(), p:get_z())
+  log(string.format("moving enemy unit 1 from (%.1f, %.1f) to (%.1f, %.1f)",
+    p:get_x(), p:get_z(), target:get_x(), target:get_z()))
+
+  local r1 = try(twllm_controller, "goto_location", target, false)
+  log("goto_location -> " .. tostring(r1))
+  if type(r1) == "string" and r1:sub(1, 4) == "ERR:" then
+    local r2 = try(twllm_controller, "goto_location_angle_width", target, 0, 40, false)
+    log("goto_location_angle_width -> " .. tostring(r2))
+  end
+end
+
+function twllm_tick()
+  twllm_ticks = twllm_ticks + 1
+  if twllm_ticks <= 10 or twllm_ticks % 10 == 0 then
+    local ok, pos = pcall(function()
+      local p = enemy_unit():position()
+      return string.format("(%.1f, %.1f)", p:get_x(), p:get_z())
+    end)
+    log("tick " .. twllm_ticks .. " enemy unit 1 at " .. tostring(ok and pos or "ERR"))
+  end
+end
+
+function BattlePhaseChange(event)
+  local name = tostring(try(event, "get_name"))
+  log("phase: " .. name)
+  if name == "Deployed" then
+    local ok1, e1 = pcall(dump_units)
+    if not ok1 then log("dump_units ERR: " .. tostring(e1)) end
+    local ok2, e2 = pcall(move_enemy_unit)
+    if not ok2 then log("move_enemy_unit ERR: " .. tostring(e2)) end
+    log("register_repeating_timer: " .. tostring(try(battle, "register_repeating_timer", "twllm_tick", 3000)))
+  end
+end
+
+if ok_battle then
+  log("register_battle_phase_handler: "
+    .. tostring(try(battle, "register_battle_phase_handler", "BattlePhaseChange")))
+  pcall(dump_units)
+end

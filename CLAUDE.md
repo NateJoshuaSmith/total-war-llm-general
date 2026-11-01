@@ -51,7 +51,17 @@ The docs are Shogun 2 era, so every function must be confirmed in Napoleon durin
 2. **Plan A fallback**: Lua prints state to lua.log (Python tails it); Python rewrites a small `orders.lua` that the script reloads each tick.
 3. **Plan B**: memory reading via a helper process (WALI-style). Last resort.
 
-Open unknowns that Phase 0 must answer: does battle Lua in Napoleon allow `io`? Can a custom battle load our script? Does `take_control()` exist and do controlled units still fight on their own?
+## Phase 0 findings (confirmed in game, 2026-10-31, issue #6)
+
+- Install: `D:\SteamLibrary\steamapps\common\Napoleon Total War` (Steam). Config: `%APPDATA%\The Creative Assembly\Napoleon\scripts\`.
+- **Lua 5.1. `io`, `os`, `require`, `loadstring`, `debug` all work.** Battle Lua can write and read files (relative paths land in the game root). **Plan A is viable.**
+- `system.ClearRequiredFiles` exists, so the reload fallback is available too.
+- `data\battle_scripted.lua` is a loose file that runs on every battle load, custom battles included. But `empire_battle` is **nil** there, so no unit access from it.
+- The battle API only exists inside a battle's own script: a battle XML's `<battle_script>` tag points to `battles\<name>\<name>_battle.battle_script` in a pack. Those scripts confirm `empire_battle:new()`, `alliances()`, `create_unit_controller()`, `add_units`, `take_control()`, `release_control()`, `attack_unit(u, bool, bool)`, `goto_location_angle_width(pos, angle, width, run)`, `register_repeating_timer("fn_name", ms)`, `register_battle_phase_handler("fn_name")` with `event:get_name()` (`"Deployment"`, `"Deployed"`), and `battle_vector:new()` + `:set(x, y, z)` / `:get_x()`.
+- **Mod packs:** build with RPFM (Game Selected = **Napoleon**, or it writes PFH5, which Napoleon can't read). Enable with `mod <name>.pack;` in `user.script.txt`, which **must be UTF-16 LE with BOM** like `preferences.script.txt`. New, uniquely named files in our pack load fine (`require "data.twllm_ping"` worked).
+- **Our pack cannot replace a file that's also in `data.pack`.** Overriding Lodi's `.battle_script` failed as a loose file, as a Movie pack, and as a Patch pack. Use unique file names instead.
+- **Never call `vfs.exists` or `package.loaders[i]` directly.** Both crashed the game natively, where pcall can't catch it.
+- Still open: how to get our own battle (new XML + script, unique names) into the game's battle list; whether any hook exists for custom battles; whether controlled units still fight on their own.
 
 ## Phases and gates
 
@@ -67,7 +77,7 @@ We move on when the gate passes, not on a date.
 | 5 Port to Empire | Same bridge, Empire's function names | Same test battles run in Empire |
 | 6 Ship it | Public repo, README, demo video | Anyone can install it from the README |
 
-**Current status:** Phase 0, not started. Repo skeleton is next.
+**Current status:** Phase 0 in progress. Skeleton + CI done (#3). File I/O confirmed. Blocked on getting our own battle script loaded (see Phase 0 findings).
 
 ## Decisions made
 
