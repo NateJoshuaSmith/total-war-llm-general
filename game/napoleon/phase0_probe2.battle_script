@@ -1,9 +1,10 @@
 -- ===== TWLLM Phase 0 probe 2 (temporary) =====
--- Replaces the Battle of Lodi's script. Save as:
---   <Napoleon>/data/battles/lodi/lodi_battle.battle_script
--- Delete that loose file to put Lodi back to normal.
+-- Replaces the Battle of Lodi's script. Goes in a mod pack at:
+--   napoleon_historical_battles\lodi\lodi_battle.battle_script
+-- (that's Lodi's real path in data.pack; battles\lodi\ is wrong).
+-- Remove the pack from user.script.txt to put Lodi back to normal.
 --
--- Tests: does a loose file override the pack? Can we read every unit? Do timers tick?
+-- Tests: does our pack override data.pack? Can we read every unit? Do timers tick?
 -- Can a script take control of one enemy unit and move it?
 -- Writes everything to twllm_probe2.txt in the game folder. Every step is in pcall.
 
@@ -25,7 +26,7 @@ local function try(obj, method, ...)
 end
 
 pcall(function() io.open(LOG, "w"):close() end)
-log("probe 2 loaded: loose battle_script override works")
+log("probe 2 loaded: our battle_script override works")
 
 -- Globals on purpose: the game looks up timer and phase callbacks by name.
 battle = nil
