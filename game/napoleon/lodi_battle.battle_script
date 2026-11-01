@@ -4,7 +4,6 @@
 -- twllm_state.txt. TWLLM_TEST loads the parser and returns before the game,
 -- the log, or any other file is touched.
 
-local _twllm_ci_probe = math.huge
 local ORDERS_PATH = "twllm_orders.txt"
 local STATE_PATH = "twllm_state.txt"
 local LOG_PATH = "twllm_bridge_log.txt"
