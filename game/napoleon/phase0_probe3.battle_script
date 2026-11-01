@@ -1,0 +1,107 @@
+-- ===== TWLLM Phase 0 probe 3 (temporary) =====
+-- Replaces the Battle of Lodi's script. Goes in a mod pack at:
+--   napoleon_historical_battles\lodi\lodi_battle.battle_script
+-- Remove the pack from user.script.txt to put Lodi back to normal.
+--
+-- Tests: do we really control a unit, or did the game's AI move it in probe 2?
+-- Sends the Austrian general (enemy unit 1) about 290 m north-east, away from the
+-- French (who are south, at negative z). The AI would never do that.
+-- Target (536, 363) is where Lodi's own script sends the general, so it's known
+-- reachable ground. (Run 1 used 200 m due north; the general never moved, likely
+-- an unreachable spot.)
+-- Logs an untouched Austrian unit (enemy unit 5) next to it for comparison.
+-- Writes everything to twllm_probe3.txt in the game folder. Every step is in pcall.
+
+local LOG = "twllm_probe3.txt"
+local CONTROLLED = 1
+local UNTOUCHED = 5
+
+local function log(s)
+  pcall(function()
+    local f = io.open(LOG, "a")
+    f:write(os.date("%H:%M:%S"), " ", tostring(s), "\n")
+    f:close()
+  end)
+end
+
+-- Call obj:method() safely; returns the result or "ERR: ...".
+local function try(obj, method, ...)
+  local ok, result = pcall(function(...) return obj[method](obj, ...) end, ...)
+  if ok then return result end
+  return "ERR: " .. tostring(result)
+end
+
+pcall(function() io.open(LOG, "w"):close() end)
+log("probe 3 loaded")
+
+-- Globals on purpose: the game looks up timer and phase callbacks by name.
+battle = nil
+twllm_ticks = 0
+twllm_controller = nil
+twllm_target_x = nil
+twllm_target_z = nil
+
+local ok_battle, err_battle = pcall(function() battle = empire_battle:new() end)
+log("empire_battle:new() ok=" .. tostring(ok_battle) .. " " .. tostring(err_battle or ""))
+
+local function enemy_unit(i)
+  return battle:alliances():item(2):armies():item(1):units():item(i)
+end
+
+local function pos_str(i)
+  local ok, s = pcall(function()
+    local p = enemy_unit(i):position()
+    return string.format("(%.1f, %.1f)", p:get_x(), p:get_z())
+  end)
+  return ok and s or ("ERR: " .. tostring(s))
+end
+
+local function distance_to_target()
+  local ok, d = pcall(function()
+    local p = enemy_unit(CONTROLLED):position()
+    local dx, dz = p:get_x() - twllm_target_x, p:get_z() - twllm_target_z
+    return string.format("%.1f", math.sqrt(dx * dx + dz * dz))
+  end)
+  return ok and d or "ERR"
+end
+
+local function move_north()
+  local u = enemy_unit(CONTROLLED)
+  twllm_controller = battle:alliances():item(2):armies():item(1):create_unit_controller()
+  twllm_controller:add_units(u)
+  log("take_control: " .. tostring(try(twllm_controller, "take_control")))
+
+  local p = u:position()
+  twllm_target_x = 536
+  twllm_target_z = 363
+  local target = battle_vector:new()
+  target:set(twllm_target_x, 0, twllm_target_z)
+  log(string.format("ordering enemy unit %d NORTH-EAST (away from the French) from (%.1f, %.1f) to (%.1f, %.1f)",
+    CONTROLLED, p:get_x(), p:get_z(), twllm_target_x, twllm_target_z))
+  log("goto_location -> " .. tostring(try(twllm_controller, "goto_location", target, false)))
+end
+
+function twllm_tick()
+  twllm_ticks = twllm_ticks + 1
+  if twllm_ticks <= 20 or twllm_ticks % 10 == 0 then
+    log(string.format("tick %d controlled unit %d at %s (%s m to target) | untouched unit %d at %s",
+      twllm_ticks, CONTROLLED, pos_str(CONTROLLED), distance_to_target(), UNTOUCHED, pos_str(UNTOUCHED)))
+  end
+end
+
+function BattlePhaseChange(event)
+  local name = tostring(try(event, "get_name"))
+  log("phase: " .. name)
+  if name == "Deployed" then
+    log("before order: controlled unit " .. CONTROLLED .. " at " .. pos_str(CONTROLLED)
+      .. " | untouched unit " .. UNTOUCHED .. " at " .. pos_str(UNTOUCHED))
+    local ok, e = pcall(move_north)
+    if not ok then log("move_north ERR: " .. tostring(e)) end
+    log("register_repeating_timer: " .. tostring(try(battle, "register_repeating_timer", "twllm_tick", 3000)))
+  end
+end
+
+if ok_battle then
+  log("register_battle_phase_handler: "
+    .. tostring(try(battle, "register_battle_phase_handler", "BattlePhaseChange")))
+end
