@@ -57,11 +57,14 @@ The docs are Shogun 2 era, so every function must be confirmed in Napoleon durin
 - **Lua 5.1. `io`, `os`, `require`, `loadstring`, `debug` all work.** Battle Lua can write and read files (relative paths land in the game root). **Plan A is viable.**
 - `system.ClearRequiredFiles` exists, so the reload fallback is available too.
 - `data\battle_scripted.lua` is a loose file that runs on every battle load, custom battles included. But `empire_battle` is **nil** there, so no unit access from it.
-- The battle API only exists inside a battle's own script: a battle XML's `<battle_script>` tag points to `battles\<name>\<name>_battle.battle_script` in a pack. Those scripts confirm `empire_battle:new()`, `alliances()`, `create_unit_controller()`, `add_units`, `take_control()`, `release_control()`, `attack_unit(u, bool, bool)`, `goto_location_angle_width(pos, angle, width, run)`, `register_repeating_timer("fn_name", ms)`, `register_battle_phase_handler("fn_name")` with `event:get_name()` (`"Deployment"`, `"Deployed"`), and `battle_vector:new()` + `:set(x, y, z)` / `:get_x()`.
+- The battle API only exists inside a battle's own script: a battle XML's `<battle_script>` tag points to a `.battle_script` next to the XML, e.g. `napoleon_historical_battles\lodi\lodi_battle.battle_script` in `data.pack` (lowercase in the pack index; not `battles\...`). Those scripts confirm `empire_battle:new()`, `alliances()`, `create_unit_controller()`, `add_units`, `take_control()`, `release_control()`, `attack_unit(u, bool, bool)`, `goto_location_angle_width(pos, angle, width, run)`, `register_repeating_timer("fn_name", ms)`, `register_battle_phase_handler("fn_name")` with `event:get_name()` (`"Deployment"`, `"Deployed"`), and `battle_vector:new()` + `:set(x, y, z)` / `:get_x()`.
 - **Mod packs:** build with RPFM (Game Selected = **Napoleon**, or it writes PFH5, which Napoleon can't read). Enable with `mod <name>.pack;` in `user.script.txt`, which **must be UTF-16 LE with BOM** like `preferences.script.txt`. New, uniquely named files in our pack load fine (`require "data.twllm_ping"` worked).
-- **Our pack cannot replace a file that's also in `data.pack`.** Overriding Lodi's `.battle_script` failed as a loose file, as a Movie pack, and as a Patch pack. Use unique file names instead.
+- **A Mod pack can replace a `data.pack` file at the exact same path.** `twllm_probe.pack` (type Mod, in `user.script.txt`) with `napoleon_historical_battles\lodi\lodi_battle.battle_script` replaced Lodi's script. Earlier "can't override" results used the wrong path (`battles\lodi\...`). Our script replaces Lodi's entirely, so the scripted Austrian moves stop and uncontrolled units fall back to the game's battle AI.
+- **Probe 2 in Lodi (the battle API works):** `empire_battle:new()` ok; 2 alliances, 15 + 20 units read with `position()` (`get_x/y/z`), `bearing()`, `number_of_men_alive()`, `initial_number_of_men()`, `is_cavalry/infantry/artillery()`, `is_routing()`, `ammo_left()`. **`is_idle()` doesn't exist** in Napoleon. `register_battle_phase_handler` fires `Startup`, `Deployment`, `Deployed`. `register_repeating_timer("fn", 3000)` ticks every 3 s. `create_unit_controller()` + `add_units` + `take_control()` + `goto_location(vec, false)` ran without error and enemy unit 1 then moved about 63 m toward the target in 30 s. These calls return nil, so the game's AI moving it the same way isn't ruled out yet; next probe sends a unit somewhere the AI never would. Check results by reading positions.
+- Battle registry: `db\battles_tables\battles` (key e.g. `NHB_Lodi`, type `napoleon_historic`, XML path, screenshot, intro movie, year). A brand-new battle would also need `battle_sequences` and `battles_to_battle_sky_types_junctions` rows plus `battles_localised_name_<key>` / `battles_description_<key>` loc text. Not needed while overriding Lodi works.
+- RPFM can't save a pack while Napoleon is running ("Access is denied", os error 5). Quit the game first.
 - **Never call `vfs.exists` or `package.loaders[i]` directly.** Both crashed the game natively, where pcall can't catch it.
-- Still open: how to get our own battle (new XML + script, unique names) into the game's battle list; whether any hook exists for custom battles; whether controlled units still fight on their own.
+- Still open: whether any hook exists for custom battles; whether controlled units still fight on their own; Python writing the orders file that moves the unit (the actual Phase 0 gate).
 
 ## Phases and gates
 
@@ -77,7 +80,7 @@ We move on when the gate passes, not on a date.
 | 5 Port to Empire | Same bridge, Empire's function names | Same test battles run in Empire |
 | 6 Ship it | Public repo, README, demo video | Anyone can install it from the README |
 
-**Current status:** Phase 0 in progress. Skeleton + CI done (#3). File I/O confirmed. Blocked on getting our own battle script loaded (see Phase 0 findings).
+**Current status:** Phase 0 in progress. Skeleton + CI done (#3). File I/O confirmed. Our script runs in Lodi via a pack override, reads every unit, ticks on a timer, and an ordered enemy unit moved as told (control not yet proven). Next: prove control, then Python writes the order file that Lua reads (Phase 0 gate).
 
 ## Decisions made
 
