@@ -3,7 +3,7 @@ import math
 import pytest
 from pydantic import ValidationError
 
-from tw_general.models.order import MoveOrder
+from tw_general.models.order import MoveOrder, ReleaseOrder
 
 
 def test_valid_order() -> None:
@@ -34,3 +34,16 @@ def test_rejects_non_finite_coordinates(field: str, bad: float) -> None:
     values[field] = bad
     with pytest.raises(ValidationError):
         MoveOrder(**values)
+
+
+def test_release_order() -> None:
+    order = ReleaseOrder(seq=1793600000000, unit=1)
+    assert order.seq == 1793600000000
+    assert order.unit == 1
+    with pytest.raises(ValidationError):
+        order.unit = 2
+
+
+def test_release_rejects_unit_zero() -> None:
+    with pytest.raises(ValidationError):
+        ReleaseOrder(seq=1, unit=0)

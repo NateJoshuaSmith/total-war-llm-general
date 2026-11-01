@@ -40,3 +40,26 @@ def test_missing_game_dir_exits_2(tmp_path: Path, capsys: pytest.CaptureFixture[
     assert caught.value.code == 2
     assert "does not exist" in capsys.readouterr().err
     assert not (tmp_path / "twllm_orders.txt").exists()
+
+
+def test_release_writes_a_release_order(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    main(["--unit", "1", "--release", "--game-dir", str(tmp_path)])
+    fields = _fields(tmp_path / "twllm_orders.txt")
+    assert int(fields["seq"]) > 0
+    assert fields["unit"] == "1"
+    assert fields["action"] == "release"
+    assert "x" not in fields
+    assert "z" not in fields
+    assert "run" not in fields
+    message = capsys.readouterr().out
+    assert f"Sent order {fields['seq']}: released unit 1." in message
+
+
+def test_missing_x_without_release_errors(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    with pytest.raises(SystemExit) as caught:
+        main(["--unit", "1", "--z", "1", "--game-dir", str(tmp_path)])
+    assert caught.value.code == 2
+    assert "--x" in capsys.readouterr().err
+    assert not (tmp_path / "twllm_orders.txt").exists()

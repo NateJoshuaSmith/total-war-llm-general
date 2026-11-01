@@ -9,3 +9,10 @@ class MoveOrder(BaseModel):
     x: float = Field(allow_inf_nan=False)
     z: float = Field(allow_inf_nan=False)
     run: bool
+
+
+class ReleaseOrder(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    seq: int = Field(gt=0)
+    unit: int = Field(ge=1)

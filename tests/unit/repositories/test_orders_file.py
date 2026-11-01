@@ -4,17 +4,26 @@ from pathlib import Path
 import pytest
 
 import tw_general.repositories.orders_file as orders_file
-from tw_general.models.order import MoveOrder
+from tw_general.models.order import MoveOrder, ReleaseOrder
 from tw_general.repositories.orders_file import OrdersFileRepository
 
 FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "orders_example.txt"
+RELEASE_FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "orders_release_example.txt"
 EXAMPLE = MoveOrder(seq=1730400000000, unit=1, x=536.0, z=363.0, run=True)
+RELEASE = ReleaseOrder(seq=1793600000000, unit=1)
 
 
 def test_matches_fixture_bytes(tmp_path: Path) -> None:
     destination = tmp_path / "twllm_orders.txt"
     OrdersFileRepository(destination).write(EXAMPLE)
     assert destination.read_bytes() == FIXTURE.read_bytes()
+    assert not Path(str(destination) + ".tmp").exists()
+
+
+def test_release_matches_fixture_bytes(tmp_path: Path) -> None:
+    destination = tmp_path / "twllm_orders.txt"
+    OrdersFileRepository(destination).write(RELEASE)
+    assert destination.read_bytes() == RELEASE_FIXTURE.read_bytes()
     assert not Path(str(destination) + ".tmp").exists()
 
 
