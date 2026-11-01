@@ -1,0 +1,193 @@
+-- Lodi battle script. Pack path:
+--   napoleon_historical_battles\lodi\lodi_battle.battle_script
+-- A new seq in twllm_orders.txt moves one Austrian unit. Every tick rewrites
+-- twllm_state.txt. TWLLM_TEST loads the parser and returns before the game,
+-- the log, or any other file is touched.
+
+local ORDERS_PATH = "twllm_orders.txt"
+local STATE_PATH = "twllm_state.txt"
+local LOG_PATH = "twllm_bridge_log.txt"
+local MAX_ORDER_BYTES = 4096
+local last_seq, tick_count, last_reason = 0, 0, nil
+local controllers = {}
+
+local function log(message)
+  pcall(function()
+    local handle = io.open(LOG_PATH, "a")
+    handle:write(os.date("%H:%M:%S"), " ", tostring(message), "\n")
+    handle:close()
+  end)
+end
+
+local function try(obj, method, ...)
+  local ok, result = pcall(function(...) return obj[method](obj, ...) end, ...)
+  if ok then return result end
+  return "ERR: " .. tostring(result)
+end
+
+local function finite_number(raw)
+  local n = tonumber(raw)
+  if n == nil or n ~= n or n == math.huge or n == -math.huge then
+    return nil
+  end
+  return n
+end
+
+function twllm_parse_orders(text)
+  if type(text) ~= "string" then return nil, "not a string" end
+  if #text > MAX_ORDER_BYTES then return nil, "too long" end
+
+  local lines = {}
+  local normalized = text:gsub("\r\n", "\n"):gsub("\r", "\n")
+  for line in (normalized .. "\n"):gmatch("(.-)\n") do
+    line = line:gsub("\r", ""):gsub("^%s+", ""):gsub("%s+$", "")
+    if line ~= "" then lines[#lines + 1] = line end
+  end
+  if #lines == 0 or lines[#lines] ~= "end" then return nil, "no end line" end
+
+  local values = {}
+  for i = 1, #lines - 1 do
+    local key, value = lines[i]:match("^([%w_]+)=(.*)$")
+    if not key then return nil, "bad line" end
+    values[key] = value
+  end
+  local parsed = {}
+  for _, key in ipairs({ "seq", "unit", "x", "z", "run" }) do
+    if values[key] == nil then return nil, "missing " .. key end
+    parsed[key] = finite_number(values[key])
+    if parsed[key] == nil then return nil, "bad " .. key end
+  end
+  if math.floor(parsed.seq) ~= parsed.seq or parsed.seq < 1 then return nil, "bad seq" end
+  if math.floor(parsed.unit) ~= parsed.unit or parsed.unit < 1 then return nil, "bad unit" end
+  if parsed.run ~= 0 and parsed.run ~= 1 then return nil, "bad run" end
+  return {
+    seq = parsed.seq,
+    unit = parsed.unit,
+    x = parsed.x,
+    z = parsed.z,
+    run = (parsed.run == 1),
+  }
+end
+
+local function read_orders()
+  local handle = io.open(ORDERS_PATH, "r")
+  if not handle then return nil end
+  local text = handle:read(MAX_ORDER_BYTES)
+  handle:close()
+  return text or ""
+end
+
+local function write_state()
+  local parts = { "tick=" .. tick_count, "last_seq=" .. tostring(last_seq) }
+  local alliances = battle:alliances()
+  for alliance = 1, alliances:count() do
+    local armies = alliances:item(alliance):armies()
+    for army = 1, armies:count() do
+      local units = armies:item(army):units()
+      for index = 1, units:count() do
+        local ok, line = pcall(function()
+          local unit = units:item(index)
+          local position = unit:position()
+          return string.format("u=%d,%d,%d,%.1f,%.1f,%s", alliance, army, index,
+            position:get_x(), position:get_z(), tostring(unit:number_of_men_alive()))
+        end)
+        if ok then parts[#parts + 1] = line end
+      end
+    end
+  end
+  parts[#parts + 1] = "end"
+  local handle = io.open(STATE_PATH, "w")
+  if not handle then return end
+  handle:write(table.concat(parts, "\n"), "\n")
+  handle:close()
+end
+
+local function enemy_army()
+  return battle:alliances():item(2):armies():item(1)
+end
+
+local function apply_order()
+  local text = read_orders()
+  if text == nil then return end
+  local order, reason = twllm_parse_orders(text)
+  if order == nil then
+    if reason ~= last_reason then
+      last_reason = reason
+      log("orders rejected: " .. tostring(reason))
+    end
+    return
+  end
+  if order.seq <= last_seq then return end
+
+  -- Set first so a bad order, including an out-of-range unit, is not retried.
+  last_seq = order.seq
+  local units = enemy_army():units()
+  local count = units:count()
+  if order.unit > count then
+    log("order seq=" .. tostring(order.seq) .. " unit " .. order.unit
+      .. " is out of range (" .. tostring(count) .. " units)")
+    return
+  end
+
+  local unit = units:item(order.unit)
+  local controller = controllers[order.unit]
+  if controller == nil then
+    controller = enemy_army():create_unit_controller()
+    controller:add_units(unit)
+    controller:take_control()
+    controllers[order.unit] = controller
+    log("took control of unit " .. order.unit)
+  end
+  local position = unit:position()
+  local target = battle_vector:new()
+  target:set(order.x, 0, order.z)
+  log("order seq=" .. tostring(order.seq) .. " unit " .. order.unit
+    .. string.format(" at (%.1f, %.1f) -> (%.1f, %.1f) run=%s",
+      position:get_x(), position:get_z(), order.x, order.z, tostring(order.run)))
+  controller:goto_location(target, order.run)
+end
+
+function twllm_tick()
+  local ok, err = pcall(function()
+    tick_count = tick_count + 1
+    apply_order()
+    write_state()
+  end)
+  if not ok then log("tick ERR: " .. tostring(err)) end
+end
+
+local function note_baseline()
+  local text = read_orders()
+  if text == nil then
+    log("no orders file at deploy")
+    return
+  end
+  local order, reason = twllm_parse_orders(text)
+  if order == nil then
+    log("orders file at deploy did not parse: " .. tostring(reason))
+    return
+  end
+  last_seq = order.seq
+  log("baseline seq=" .. tostring(order.seq) .. " (not acted on)")
+end
+
+function BattlePhaseChange(event)
+  local name = tostring(try(event, "get_name"))
+  log("phase: " .. name)
+  if name ~= "Deployed" then return end
+  local ok, err = pcall(note_baseline)
+  if not ok then log("baseline ERR: " .. tostring(err)) end
+  log("register_repeating_timer: " .. tostring(
+    try(battle, "register_repeating_timer", "twllm_tick", 3000)))
+end
+
+if TWLLM_TEST then return end
+
+log("lodi battle script loaded")
+battle = nil
+local ok_battle, err_battle = pcall(function() battle = empire_battle:new() end)
+log("empire_battle:new() ok=" .. tostring(ok_battle) .. " " .. tostring(err_battle or ""))
+if ok_battle then
+  log("register_battle_phase_handler: " .. tostring(
+    try(battle, "register_battle_phase_handler", "BattlePhaseChange")))
+end
