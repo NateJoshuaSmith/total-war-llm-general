@@ -8,7 +8,7 @@ local ORDERS_PATH = "twllm_orders.txt"
 local STATE_PATH = "twllm_state.txt"
 local LOG_PATH = "twllm_bridge_log.txt"
 local MAX_ORDER_BYTES = 4096
-local last_seq, tick_count, last_reason, last_tick_error = 0, 0, nil, nil
+local last_seq_text, tick_count, last_reason, last_tick_error = nil, 0, nil, nil
 local controllers = {}
 
 local function log(message)
@@ -61,8 +61,10 @@ function twllm_parse_orders(text)
   if parsed.seq % 1 ~= 0 or parsed.seq < 1 then return nil, "bad seq" end
   if parsed.unit % 1 ~= 0 or parsed.unit < 1 then return nil, "bad unit" end
   if parsed.run ~= 0 and parsed.run ~= 1 then return nil, "bad run" end
+  local seq_text = values.seq:match("^%s*(.-)%s*$")
   return {
     seq = parsed.seq,
+    seq_text = seq_text,
     unit = parsed.unit,
     x = parsed.x,
     z = parsed.z,
@@ -79,7 +81,7 @@ local function read_orders()
 end
 
 local function write_state()
-  local parts = { "tick=" .. tick_count, "last_seq=" .. tostring(last_seq) }
+  local parts = { "tick=" .. tick_count, "last_seq=" .. (last_seq_text or "") }
   local alliances = battle:alliances()
   for alliance = 1, alliances:count() do
     local armies = alliances:item(alliance):armies()
@@ -118,14 +120,14 @@ local function apply_order()
     end
     return
   end
-  if order.seq <= last_seq then return end
+  if order.seq_text == last_seq_text then return end
 
   -- Set first so a bad order, including an out-of-range unit, is not retried.
-  last_seq = order.seq
+  last_seq_text = order.seq_text
   local units = enemy_army():units()
   local count = units:count()
   if order.unit > count then
-    log("order seq=" .. tostring(order.seq) .. " unit " .. order.unit
+    log("order seq=" .. order.seq_text .. " unit " .. order.unit
       .. " is out of range (" .. tostring(count) .. " units)")
     return
   end
@@ -142,7 +144,7 @@ local function apply_order()
   local position = unit:position()
   local target = battle_vector:new()
   target:set(order.x, 0, order.z)
-  log("order seq=" .. tostring(order.seq) .. " unit " .. order.unit
+  log("order seq=" .. order.seq_text .. " unit " .. order.unit
     .. string.format(" at (%.1f, %.1f) -> (%.1f, %.1f) run=%s",
       position:get_x(), position:get_z(), order.x, order.z, tostring(order.run)))
   controller:goto_location(target, order.run)
@@ -174,8 +176,8 @@ local function note_baseline()
     log("orders file at deploy did not parse: " .. tostring(reason))
     return
   end
-  last_seq = order.seq
-  log("baseline seq=" .. tostring(order.seq) .. " (not acted on)")
+  last_seq_text = order.seq_text
+  log("baseline seq=" .. order.seq_text .. " (not acted on)")
 end
 
 function BattlePhaseChange(event)
