@@ -67,8 +67,9 @@ The docs are Shogun 2 era, so every function must be confirmed in Napoleon durin
 - **Napoleon's Lua is not stock 5.1.** `math.huge` is nil (use `n - n ~= 0` to reject NaN/inf). Confirmed present: `math.floor`, `string.gmatch/match/gsub/format`, `table.concat`, `os.date`, `io.open`. Only use functions confirmed in game; the battle script logs a `lua libs:` line at load.
 - **Lua numbers are single-precision floats** (about 7 significant digits). A 13-digit `seq` rounds to steps of 131072, so compare IDs as text, never as numbers. Map coordinates are fine.
 - **Phase 0 gate passed (2026-10-31, #12, #15, #17):** `send_order` wrote `twllm_orders.txt`, and the Lodi script picked each order up within 3 s. The general ran toward the church, then a second order 33 s later turned him around and walked him back. A leftover order at deploy was ignored. An earlier run had ignored the second order because of the float rounding above; #17 fixed that by comparing `seq` as text.
+- **`release_control()` works (2026-11-01, #20/#23):** after `--release` the general stopped heading for the church and the game's AI moved him elsewhere. A later move order took control again (new controller) and he headed back toward the church, though his path went around the town first, so judge progress over a longer window than one tick.
 - **Never call `vfs.exists` or `package.loaders[i]` directly.** Both crashed the game natively, where pcall can't catch it.
-- Still open: whether any hook exists for custom battles; whether controlled units still fight on their own; Python writing the orders file that moves the unit (the actual Phase 0 gate).
+- Still open: whether any hook exists for custom battles; whether controlled units still fight on their own.
 
 ## Phases and gates
 
@@ -84,7 +85,7 @@ We move on when the gate passes, not on a date.
 | 5 Port to Empire | Same bridge, Empire's function names | Same test battles run in Empire |
 | 6 Ship it | Public repo, README, demo video | Anyone can install it from the README |
 
-**Current status:** Phase 0 gate passed (2026-10-31): a Python command moves an Austrian unit in Lodi through the orders file (#17). Next: Phase 0 follow-ups (Lua CI pinned to Napoleon's Lua, `docs/SPEC.md`, a `release_control` check), research into hooking custom battles, then Phase 1 (Python reads `twllm_state.txt` and builds the battlefield report).
+**Current status:** Phase 0 gate passed (2026-10-31): a Python command moves an Austrian unit in Lodi through the orders file (#17). Phase 0 follow-ups are done: Lua CI (#22), `docs/SPEC.md` (#21), release order (#23). Next: research into hooking custom battles, then Phase 1 (Python reads `twllm_state.txt` and builds the battlefield report).
 
 ## Decisions made
 
