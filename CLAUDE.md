@@ -64,6 +64,9 @@ The docs are Shogun 2 era, so every function must be confirmed in Napoleon durin
 - **Unit control confirmed (probe 3, `game/napoleon/phase0_probe3.battle_script`):** after `take_control()` the Austrian general stopped following the AI. Ordered to (536, 363), away from the French (the spot Lodi's own script uses), he headed there while an untouched unit next to him marched the other way. He went at walking pace (`goto_location(vec, false)`) and slowed to a crawl after about 50 m, probably blocked by terrain or units. An order to a spot he can't reach (200 m due north) fails silently: he just stands still. So orders need reachable targets and a "no progress" check.
 - Battle registry: `db\battles_tables\battles` (key e.g. `NHB_Lodi`, type `napoleon_historic`, XML path, screenshot, intro movie, year). A brand-new battle would also need `battle_sequences` and `battles_to_battle_sky_types_junctions` rows plus `battles_localised_name_<key>` / `battles_description_<key>` loc text. Not needed while overriding Lodi works.
 - RPFM can't save a pack while Napoleon is running ("Access is denied", os error 5). Quit the game first.
+- **Napoleon's Lua is not stock 5.1.** `math.huge` is nil (use `n - n ~= 0` to reject NaN/inf). Confirmed present: `math.floor`, `string.gmatch/match/gsub/format`, `table.concat`, `os.date`, `io.open`. Only use functions confirmed in game; the battle script logs a `lua libs:` line at load.
+- **Lua numbers are single-precision floats** (about 7 significant digits). A 13-digit `seq` rounds to steps of 131072, so compare IDs as text, never as numbers. Map coordinates are fine.
+- **Phase 0 gate passed (2026-10-31, #12, #15, #17):** `send_order` wrote `twllm_orders.txt`, and the Lodi script picked each order up within 3 s. The general ran toward the church, then a second order 33 s later turned him around and walked him back. A leftover order at deploy was ignored. An earlier run had ignored the second order because of the float rounding above; #17 fixed that by comparing `seq` as text.
 - **Never call `vfs.exists` or `package.loaders[i]` directly.** Both crashed the game natively, where pcall can't catch it.
 - Still open: whether any hook exists for custom battles; whether controlled units still fight on their own; Python writing the orders file that moves the unit (the actual Phase 0 gate).
 
@@ -81,7 +84,7 @@ We move on when the gate passes, not on a date.
 | 5 Port to Empire | Same bridge, Empire's function names | Same test battles run in Empire |
 | 6 Ship it | Public repo, README, demo video | Anyone can install it from the README |
 
-**Current status:** Phase 0 in progress. Skeleton + CI done (#3). File I/O confirmed. Our script runs in Lodi via a pack override, reads every unit, ticks on a timer, and controls an enemy unit (probe 3). Next: Python writes the order file that Lua reads (Phase 0 gate).
+**Current status:** Phase 0 gate passed (2026-10-31): a Python command moves an Austrian unit in Lodi through the orders file (#17). Next: Phase 0 follow-ups (Lua CI pinned to Napoleon's Lua, `docs/SPEC.md`, a `release_control` check), research into hooking custom battles, then Phase 1 (Python reads `twllm_state.txt` and builds the battlefield report).
 
 ## Decisions made
 
