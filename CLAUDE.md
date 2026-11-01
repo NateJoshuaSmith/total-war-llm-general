@@ -146,9 +146,8 @@ docs/DECISIONS.md     Architecture decisions, newest first
    gh pr view N
    gh pr diff N
    gh pr checks N
-   gh pr checkout N && ruff check . && ruff format --check . && lint-imports && pytest
+   gh pr checkout N && ruff check . && ruff format --check . && lint-imports && pytest && luacheck game/ && busted tests/lua
    ```
-   Add `luacheck game/ && busted tests/lua` once Lua CI exists.
 4. Post the review with `gh pr review N --comment -b "..."`. Start the comment with a verdict line: **Approve**, **Approve with nits**, or **Changes requested**, and include the check results. Use `--comment` rather than `--approve`, since everything runs under Nathan's GitHub account and GitHub won't let an account approve its own PR.
 5. On **Changes requested**, Cursor fixes it on the same branch and Nathan asks you to review again.
 6. Nathan merges once CI is green and the verdict is Approve. Never merge on Changes requested.

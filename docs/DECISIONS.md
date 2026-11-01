@@ -2,6 +2,14 @@
 
 Newest first.
 
+## 2026-10-31: Lua CI runs stock Lua 5.1 plus a luacheck `napoleon` std
+
+**Decision:** The CI Lua job installs Lua 5.1 and runs `luacheck game/` and `busted tests/lua`. luacheck checks game files against a `napoleon` standard: Lua 5.1 without `math.huge`, plus the game globals the battle script is allowed to use.
+
+**Why:** The game's Lua is missing parts of 5.1 (`math.huge` is nil) and its numbers are single precision. Both of those passed stock Lua on a developer machine and only failed in the game.
+
+**Replaces:** nothing.
+
 ## 2026-10-31: Orders file is `key=value` lines ending in `end`
 
 **Decision:** Python and Lua exchange orders through `twllm_orders.txt` in the game root: one `key=value` per line, last line `end`. Keys for Phase 0: `seq`, `unit`, `x`, `z`, `run`. Lua ignores unknown keys, so we can add keys later without breaking old scripts. Python writes it atomically (temp file + rename). The state file `twllm_state.txt` uses the same style.

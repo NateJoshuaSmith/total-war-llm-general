@@ -1,5 +1,8 @@
+-- Napoleon's Lua numbers are single precision (~7 digits). Never compare IDs or large numbers as numbers; compare text.
 TWLLM_TEST = true
 dofile("game/napoleon/lodi_battle.battle_script")
+
+local napoleon_env = dofile("tests/lua/napoleon_env.lua")
 
 local function read_fixture()
   local handle = assert(io.open("tests/fixtures/orders_example.txt", "rb"))
@@ -155,11 +158,8 @@ describe("twllm_parse_orders", function()
     assert.is_true(first.seq_text ~= second.seq_text)
   end)
 
-  it("parses when math.huge and math.floor are missing", function()
-    local saved_huge = math.huge
-    local saved_floor = math.floor
-    math.huge = nil
-    math.floor = nil
+  it("parses when math.huge is missing", function()
+    local restore = napoleon_env()
     local ok, err = pcall(function()
       dofile("game/napoleon/lodi_battle.battle_script")
       local order, reason = twllm_parse_orders(fixture)
@@ -172,8 +172,7 @@ describe("twllm_parse_orders", function()
       assert_rejected(replace_value(fixture, "unit", "1.5"))
       assert_rejected(replace_value(fixture, "seq", "-3"))
     end)
-    math.huge = saved_huge
-    math.floor = saved_floor
+    restore()
     if not ok then error(err, 0) end
   end)
 

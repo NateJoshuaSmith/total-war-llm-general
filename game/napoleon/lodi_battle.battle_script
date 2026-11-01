@@ -194,7 +194,8 @@ if TWLLM_TEST then return end
 
 log("lodi battle script loaded")
 log("lua libs: math.floor=" .. type(math.floor)
-  .. " math.huge=" .. type(math.huge)
+  -- Startup log only. Any other math.huge in this file is a luacheck error.
+  .. " math.huge=" .. type(math.huge) -- luacheck: ignore 143
   .. " string.gmatch=" .. type(string.gmatch)
   .. " string.match=" .. type(string.match)
   .. " string.gsub=" .. type(string.gsub)
