@@ -2,6 +2,14 @@
 
 Newest first.
 
+## 2026-11-01: Custom battles are battle XMLs we generate
+
+**Decision:** We don't hook the game's Custom Battle menu. Python generates a battle XML (map, armies, positions) that names our battle script, writes it to `data\twllm_battles\<name>\`, and sets `game_startup_mode battle <xml>;` in `user.script.txt` so the game boots straight into it.
+
+**Why:** Custom battles have no battle script, and the only Lua that runs in them (`battle_scripted.lua` and the advice events) has no `empire_battle` and can't give orders. Probes 4 and 5 confirmed this. A generated XML gives us any map and army we want, with our script and the full battle API, and it worked in game first time. It also makes test battles repeatable for Phase 4.
+
+**Replaces:** overriding Lodi as the only way in. Lodi still works and stays as a second test battle.
+
 ## 2026-10-31: Lua CI runs stock Lua 5.1 plus a luacheck `napoleon` std
 
 **Decision:** The CI Lua job installs Lua 5.1 and runs `luacheck game/` and `busted tests/lua`. luacheck checks game files against a `napoleon` standard: Lua 5.1 without `math.huge`, plus the game globals the battle script is allowed to use.
