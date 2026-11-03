@@ -9,6 +9,7 @@ local STATE_PATH = "twllm_state.txt"
 local LOG_PATH = "twllm_bridge_log.txt"
 local MAX_ORDER_BYTES = 4096
 local last_seq_text, tick_count, last_reason, last_tick_error = nil, 0, nil, nil
+local shattered_logged = false
 local controllers = {}
 
 local function log(message)
@@ -86,6 +87,75 @@ function twllm_parse_orders(text)
   return order
 end
 
+local function call_failed(value)
+  return type(value) == "string" and value:sub(1, 4) == "ERR:"
+end
+
+local function decimal_text(value)
+  local n = finite_number(value)
+  if n == nil then return "" end
+  return string.format("%.1f", n)
+end
+
+local function whole_text(value)
+  local n = finite_number(value)
+  if n == nil then return "" end
+  return string.format("%d", n)
+end
+
+local function flag_text(value)
+  if value == true or value == 1 then return "1" end
+  if value == false or value == 0 then return "0" end
+  return ""
+end
+
+local function answered_yes(value)
+  return value == true or value == 1
+end
+
+local function answered_no(value)
+  return value == false or value == 0
+end
+
+local function unit_kind(unit)
+  local cavalry = try(unit, "is_cavalry")
+  if answered_yes(cavalry) then return "cav" end
+  if not answered_no(cavalry) then return "" end
+  local infantry = try(unit, "is_infantry")
+  if answered_yes(infantry) then return "inf" end
+  if not answered_no(infantry) then return "" end
+  local artillery = try(unit, "is_artillery")
+  if answered_yes(artillery) then return "art" end
+  if not answered_no(artillery) then return "" end
+  return "other"
+end
+
+function twllm_unit_line(alliance, army, index, unit)
+  local x, z = "", ""
+  local position = try(unit, "position")
+  if not call_failed(position) and position ~= nil then
+    x = decimal_text(try(position, "get_x"))
+    z = decimal_text(try(position, "get_z"))
+  end
+  local shattered = try(unit, "is_shattered")
+  local line = "u=" .. table.concat({
+    tostring(alliance),
+    tostring(army),
+    tostring(index),
+    x,
+    z,
+    whole_text(try(unit, "number_of_men_alive")),
+    whole_text(try(unit, "initial_number_of_men")),
+    decimal_text(try(unit, "bearing")),
+    unit_kind(unit),
+    flag_text(try(unit, "is_routing")),
+    flag_text(shattered),
+    whole_text(try(unit, "ammo_left")),
+  }, ",")
+  if call_failed(shattered) then return line, shattered end
+  return line
+end
+
 local function read_orders()
   local handle = io.open(ORDERS_PATH, "r")
   if not handle then return nil end
@@ -102,13 +172,14 @@ local function write_state()
     for army = 1, armies:count() do
       local units = armies:item(army):units()
       for index = 1, units:count() do
-        local ok, line = pcall(function()
-          local unit = units:item(index)
-          local position = unit:position()
-          return string.format("u=%d,%d,%d,%.1f,%.1f,%s", alliance, army, index,
-            position:get_x(), position:get_z(), tostring(unit:number_of_men_alive()))
-        end)
-        if ok then parts[#parts + 1] = line end
+        local ok, unit = pcall(function() return units:item(index) end)
+        if not ok then unit = nil end
+        local line, shattered_err = twllm_unit_line(alliance, army, index, unit)
+        if ok and shattered_err and not shattered_logged then
+          shattered_logged = true
+          log("is_shattered unavailable: " .. shattered_err)
+        end
+        parts[#parts + 1] = line
       end
     end
   end

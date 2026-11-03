@@ -40,14 +40,14 @@ Unknown keys are ignored. Python writes the file atomically (`.tmp` then rename,
 ```
 tick=12
 last_seq=1793507896188
-u=2,1,1,536.2,362.8,24
+u=2,1,1,536.2,362.8,24,120,90.0,inf,0,0,30
 ...
 end
 ```
 
 - `tick`: ticks since deploy.
 - `last_seq`: the last order ID Lua handled (text, exactly as Python wrote it), or empty.
-- One `u=` line per unit: `alliance,army,index,x,z,men_alive`, with x/z to 0.1 m. Phase 1 adds fields (see below). New fields go **on the end** of the line so old readers keep working.
+- One `u=` line per unit: `alliance,army,index,x,z,men_alive,initial_men,bearing,type,routing,shattered,ammo`. x, z and bearing are to 0.1 m. A field that can't be read is empty, so the columns stay put. New fields go **on the end** of the line so old readers keep working.
 
 ## Battles we generate
 

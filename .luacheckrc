@@ -17,6 +17,7 @@ stds.napoleon = {
     "twllm_tick",
     "BattlePhaseChange",
     "twllm_parse_orders",
+    "twllm_unit_line",
     "TWLLM_TEST",
   },
   read_globals = {
