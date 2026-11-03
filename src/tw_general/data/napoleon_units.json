@@ -1,0 +1,115 @@
+{
+  "Gen_Early_Napoleon": {
+    "unit_category": "cavalry",
+    "num_soldiers": 24,
+    "width": 18.00,
+    "capabilities": [
+      {"tag": "special_ability", "text": "inspire_unit"},
+      {"tag": "special_ability", "text": "rally"}
+    ]
+  },
+  "Cav_Heavy_French_Dragoons": {
+    "unit_category": "cavalry",
+    "num_soldiers": 60,
+    "width": 18.00,
+    "capabilities": [
+      {"tag": "special_ability", "text": "wedge_formation"}
+    ]
+  },
+  "Inf_Gren_French_Grenadiers": {
+    "unit_category": "infantry",
+    "num_soldiers": 160,
+    "width": 16.10,
+    "capabilities": [
+      {"tag": "shot_type", "text": "grenade"},
+      {"tag": "special_ability", "text": "square_formation"},
+      {"tag": "special_ability", "text": "fire_and_advance"},
+      {"tag": "bayonet_type", "text": "socket_bayonets"}
+    ]
+  },
+  "Inf_Line_French_Fusiliers": {
+    "unit_category": "infantry",
+    "num_soldiers": 160,
+    "width": 22.70,
+    "capabilities": [
+      {"tag": "special_ability", "text": "square_formation"},
+      {"tag": "special_ability", "text": "fire_and_advance"},
+      {"tag": "bayonet_type", "text": "socket_bayonets"}
+    ]
+  },
+  "Inf_Line_French_Revolutionary_Infantry": {
+    "unit_category": "infantry",
+    "num_soldiers": 160,
+    "width": 21.60,
+    "capabilities": [
+      {"tag": "special_ability", "text": "square_formation"},
+      {"tag": "bayonet_type", "text": "socket_bayonets"}
+    ]
+  },
+  "Art_Horse_French_6_lber": {
+    "unit_category": "artillery",
+    "num_soldiers": 24,
+    "width": 27.00,
+    "capabilities": [
+      {"tag": "special_ability", "text": "unlimber"},
+      {"tag": "shot_type", "text": "round_shot"},
+      {"tag": "shot_type", "text": "canister"}
+    ]
+  },
+  "Gen_Johann_Beaulieu": {
+    "unit_category": "cavalry",
+    "num_soldiers": 24,
+    "width": 19.35,
+    "capabilities": [
+      {"tag": "special_ability", "text": "inspire_unit"},
+      {"tag": "special_ability", "text": "rally"}
+    ]
+  },
+  "Art_Foot_Austrian_12_lber": {
+    "unit_category": "artillery",
+    "num_soldiers": 32,
+    "width": 19.00,
+    "capabilities": [
+      {"tag": "special_ability", "text": "unlimber"},
+      {"tag": "shot_type", "text": "round_shot"},
+      {"tag": "shot_type", "text": "canister"},
+      {"tag": "special_ability", "text": "artillery_accuracy_boost"},
+      {"tag": "special_ability", "text": "artillery_rof_boost"}
+    ]
+  },
+  "Inf_Line_Austrian_German_Fusiliers": {
+    "unit_category": "infantry",
+    "num_soldiers": 160,
+    "width": 17.73,
+    "capabilities": [
+      {"tag": "special_ability", "text": "square_formation"},
+      {"tag": "special_ability", "text": "fire_and_advance"},
+      {"tag": "bayonet_type", "text": "socket_bayonets"}
+    ]
+  },
+  "Inf_Light_Austrian_Grenzers": {
+    "unit_category": "infantry",
+    "num_soldiers": 120,
+    "width": 17.13,
+    "capabilities": [
+      {"tag": "special_ability", "text": "light_infantry_behaviour"},
+      {"tag": "bayonet_type", "text": "socket_bayonets"}
+    ]
+  },
+  "Inf_Gren_Austrian_German_Grenadiers": {
+    "unit_category": "infantry",
+    "num_soldiers": 160,
+    "width": 18.53,
+    "capabilities": [
+      {"tag": "special_ability", "text": "square_formation"},
+      {"tag": "special_ability", "text": "fire_and_advance"},
+      {"tag": "bayonet_type", "text": "socket_bayonets"}
+    ]
+  },
+  "Inf_Militia_Austrian_Landwehr": {
+    "unit_category": "infantry",
+    "num_soldiers": 160,
+    "width": 24.47,
+    "capabilities": []
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "name": "test1",
+  "map": "BattleTerrain/presets/nap_mp_grassy_flatlands/",
+  "climate": "lc_eu_central_humid",
+  "sides": [
+    {
+      "faction": "ita_french_republic",
+      "zone": {"x": 0, "z": 400, "width": 800, "height": 200},
+      "facing": 3.14,
+      "units": [
+        {
+          "type": "Gen_Early_Napoleon",
+          "x": 0,
+          "z": 450,
+          "experience": 2,
+          "general": {
+            "name": "Napoleon Bonaparte",
+            "experience": 5,
+            "portrait": "data\\UI\\Portraits\\custom\\cards\\napoleon_y.tga",
+            "category": "napoleon"
+          }
+        },
+        {"type": "Cav_Heavy_French_Dragoons", "x": 250, "z": 380, "experience": 1},
+        {"type": "Inf_Gren_French_Grenadiers", "x": -60, "z": 360, "experience": 1},
+        {"type": "Inf_Line_French_Fusiliers", "x": 0, "z": 360, "experience": 0},
+        {"type": "Inf_Line_French_Revolutionary_Infantry", "x": 60, "z": 360, "experience": 0},
+        {"type": "Art_Horse_French_6_lber", "x": -200, "z": 380, "experience": 1}
+      ]
+    },
+    {
+      "faction": "ita_austrian_alliance",
+      "zone": {"x": 0, "z": -400, "width": 800, "height": 200},
+      "facing": 0,
+      "units": [
+        {
+          "type": "Gen_Johann_Beaulieu",
+          "x": 0,
+          "z": -450,
+          "experience": 1,
+          "general": {
+            "name": "Johann Beaulieu",
+            "experience": 5,
+            "portrait": "data\\UI\\Portraits\\custom\\cards\\beaulieu.tga"
+          }
+        },
+        {"type": "Art_Foot_Austrian_12_lber", "x": 0, "z": -320, "experience": 0},
+        {"type": "Inf_Line_Austrian_German_Fusiliers", "x": -120, "z": -360, "experience": 0},
+        {"type": "Inf_Light_Austrian_Grenzers", "x": -240, "z": -360, "experience": 1},
+        {
+          "type": "Inf_Line_Austrian_German_Fusiliers",
+          "x": 0,
+          "z": -380,
+          "experience": 1,
+          "width": 24.18
+        },
+        {"type": "Inf_Gren_Austrian_German_Grenadiers", "x": 120, "z": -360, "experience": 1},
+        {"type": "Inf_Militia_Austrian_Landwehr", "x": 240, "z": -360, "experience": 0}
+      ]
+    }
+  ]
+}
