@@ -156,6 +156,8 @@ docs/DECISIONS.md     Architecture decisions, newest first
 
 Your own doc changes (this file, `docs/`, `.cursor/rules/`): edit them, then give Nathan the git commands to branch, commit, and push. Nathan has given standing permission for you to open the PR once he has pushed.
 
+**PR descriptions and review comments are for Nathan**, who is new to modding and git. Use the same shape as Cursor's ("PR descriptions" in `.cursor/rules/workflow.mdc`): one or two plain-English sentences on what now works, 3–5 short bullets with no file names or code names, then one line of check results. Keep the technical detail in the issue, the docs, or the review's own sections. If a Cursor PR description is too dense, say so in the review.
+
 **Review checklist:**
 
 - Does it do what the issue asked, and only that?
