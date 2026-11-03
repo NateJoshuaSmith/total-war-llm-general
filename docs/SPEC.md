@@ -7,7 +7,7 @@ Phases 0 and 1. Newer phases get added as we reach them. `CLAUDE.md` has the why
 These come from Phase 0 testing in Napoleon (see `CLAUDE.md`, "Phase 0 findings").
 
 - Lua and Python talk **only through files** in the game root (`D:\SteamLibrary\steamapps\common\Napoleon Total War`). Lua opens them with relative paths.
-- Our Lua runs as a battle's own script, by overriding `napoleon_historical_battles\<battle>\<battle>_battle.battle_script` from a Mod pack. Only Lodi is set up so far.
+- Our Lua runs as a battle's own script, by overriding `napoleon_historical_battles\<battle>\<battle>_battle.battle_script` from a Mod pack (Lodi), or as the `<battle_script>` of a battle XML we generate (see "Battles we generate").
 - Napoleon's Lua reports 5.1 but **is missing parts of the standard library**: `math.huge` is nil. Use only functions confirmed in game. The script logs a `lua libs:` line at load.
 - **Lua numbers are single precision** (about 7 significant digits). Never compare IDs or large numbers as numbers; compare their text.
 - Never call `vfs.exists` or touch `package.loaders` (both crash the game, and pcall can't catch it).
@@ -21,7 +21,7 @@ These come from Phase 0 testing in Napoleon (see `CLAUDE.md`, "Phase 0 findings"
 | `twllm_state.txt` | Lua | Python (Phase 1) | Every tick (3 s) |
 | `twllm_bridge_log.txt` | Lua | People | Load, phase changes, orders, errors |
 
-All three are plain ASCII text, one `key=value` per line, `\n` line endings, and **last line `end`**. A reader treats a file without the `end` line as half-written and tries again next tick.
+All three are plain ASCII text, one `key=value` per line, and **last line `end`**. Python writes `\n` line endings; files Lua writes come out as `\r\n` (Windows text mode), so every reader accepts both. A reader treats a file without the `end` line as half-written and tries again next tick.
 
 ### `twllm_orders.txt`
 
@@ -48,6 +48,17 @@ end
 - `tick`: ticks since deploy.
 - `last_seq`: the last order ID Lua handled (text, exactly as Python wrote it), or empty.
 - One `u=` line per unit: `alliance,army,index,x,z,men_alive`, with x/z to 0.1 m. Phase 1 adds fields (see below). New fields go **on the end** of the line so old readers keep working.
+
+## Battles we generate
+
+The game's own Custom Battle menu can't run our script, so we make our own battles.
+
+- A battle is described in `eval/battles/<name>.json`: map preset, climate, and per side the faction, deployment zone, and units (type key and position). Python turns it into a battle XML.
+- Output goes to `<game>\data\twllm_battles\<name>\`: `<name>.xml`, plus `<name>.battle_script`, a copy of `game/napoleon/lodi_battle.battle_script`. The XML's `<battle_script>` is `<name>`. Loose files there load with no pack edit.
+- Alliance `id="0"` is the player (French), `id="1"` has `<non_playable />` and is ours. In Lua that's `alliances():item(2)`, the same as Lodi.
+- XML `<position x y>` maps to game x/z. The game nudges units at deploy, so the state file, not the XML, is the truth.
+- To play one, `user.script.txt` gets the line `game_startup_mode battle data/twllm_battles/<name>/<name>.xml;`. That file is UTF-16 LE with BOM and CRLF line endings. Every other line in it is kept, and a backup is made before the first change. Removing the line puts the game back to its normal menu.
+- Reference output: `tests/fixtures/battles/test1.xml`, the file that worked in game on 2026-11-01 (script renamed from `twllm_test` to `test1`).
 
 ## Phase 0: bridge (done, 2026-10-31)
 

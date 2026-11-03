@@ -69,7 +69,8 @@ The docs are Shogun 2 era, so every function must be confirmed in Napoleon durin
 - **Phase 0 gate passed (2026-10-31, #12, #15, #17):** `send_order` wrote `twllm_orders.txt`, and the Lodi script picked each order up within 3 s. The general ran toward the church, then a second order 33 s later turned him around and walked him back. A leftover order at deploy was ignored. An earlier run had ignored the second order because of the float rounding above; #17 fixed that by comparing `seq` as text.
 - **`release_control()` works (2026-11-01, #20/#23):** after `--release` the general stopped heading for the church and the game's AI moved him elsewhere. A later move order took control again (new controller) and he headed back toward the church, though his path went around the town first, so judge progress over a longer window than one tick.
 - **Never call `vfs.exists` or `package.loaders[i]` directly.** Both crashed the game natively, where pcall can't catch it.
-- Still open: whether any hook exists for custom battles; whether controlled units still fight on their own.
+- **Custom battles come from our own battle XML (2026-11-01).** The advice/trigger events fire in custom battles but run in a separate Lua state with no `empire_battle`, and their `effect` table can't give orders, so there's no hook into the game's own Custom Battle menu. Instead, `game_startup_mode battle data/<path>.xml;` in `user.script.txt` boots the game straight into any battle XML. A loose XML in `data\twllm_battles\test1\` (map `nap_mp_grassy_flatlands`, 6 French vs 7 Austrian units, `<battle_script>` = a copy of our Lodi script) loaded with no pack edit, and `send_order` moved Beaulieu from (-1.5, -366) to (-1.6, -8.7). The game moves units a little at deploy, so read real positions from the state file. XML `<position x y>` is game x/z. Probe: `game/napoleon/phase0_probe4_hooks.lua`.
+- Still open: whether controlled units still fight on their own.
 
 ## Phases and gates
 
@@ -85,7 +86,7 @@ We move on when the gate passes, not on a date.
 | 5 Port to Empire | Same bridge, Empire's function names | Same test battles run in Empire |
 | 6 Ship it | Public repo, README, demo video | Anyone can install it from the README |
 
-**Current status:** Phase 0 gate passed (2026-10-31): a Python command moves an Austrian unit in Lodi through the orders file (#17). Phase 0 follow-ups are done: Lua CI (#22), `docs/SPEC.md` (#21), release order (#23). Next: research into hooking custom battles, then Phase 1 (Python reads `twllm_state.txt` and builds the battlefield report).
+**Current status:** Phase 0 gate passed (2026-10-31): a Python command moves an Austrian unit in Lodi through the orders file (#17). Phase 0 follow-ups are done: Lua CI (#22), `docs/SPEC.md` (#21), release order (#23). Custom battles work through our own battle XML (see Phase 0 findings). Next: battle generator + startup switch, then Phase 1 (Python reads `twllm_state.txt` and builds the battlefield report).
 
 ## Decisions made
 
