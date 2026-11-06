@@ -34,6 +34,12 @@ def _battle(**overrides: object) -> dict[str, object]:
     return battle
 
 
+def test_rejects_a_name_that_leaves_the_battle_folder() -> None:
+    with pytest.raises(ValidationError) as caught:
+        Battle.model_validate(_battle(name="../../escape"))
+    assert "letters, digits and _" in str(caught.value)
+
+
 def test_rejects_a_missing_side() -> None:
     with pytest.raises(ValidationError) as caught:
         Battle.model_validate(_battle(sides=[_side()]))

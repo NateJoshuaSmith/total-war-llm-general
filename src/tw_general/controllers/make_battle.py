@@ -47,6 +47,12 @@ def main(argv: list[str] | None = None) -> None:
 
     try:
         battle = BattleRepository().read(battle_path)
+        if battle.name != args.battle:
+            print(
+                f"Battle name {battle.name!r} does not match --battle {args.battle!r}.",
+                file=sys.stderr,
+            )
+            raise SystemExit(1)
         service = BattleService(
             UnitCatalogueRepository(_CATALOGUE_PATH),
             BattleOutputRepository(),

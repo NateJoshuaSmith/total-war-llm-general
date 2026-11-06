@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class General(BaseModel):
@@ -61,6 +61,13 @@ class Battle(BaseModel):
     map: str = Field(min_length=1)
     climate: str = Field(min_length=1)
     sides: list[BattleSide]
+
+    @field_validator("name")
+    @classmethod
+    def _plain_name(cls, name: str) -> str:
+        if not all(c.isascii() and (c.isalnum() or c == "_") for c in name):
+            raise ValueError("name may only contain letters, digits and _")
+        return name
 
     @model_validator(mode="after")
     def _exactly_two_sides(self) -> "Battle":
