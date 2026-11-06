@@ -128,6 +128,22 @@ def test_bad_unit_line_among_good_ones() -> None:
     assert state.last_seq == "1793570263771"
 
 
+def test_blank_position_is_skipped() -> None:
+    text = "\n".join(
+        [
+            "tick=1",
+            "u=2,1,3,,,,,,,,,",
+            "u=2,1,1,-1.6,-8.7,24",
+            "end",
+        ]
+    )
+    state = parse_state(text)
+    assert [(unit.alliance, unit.index) for unit in state.units] == [(2, 1)]
+    assert state.units[0].x == pytest.approx(-1.6)
+    assert state.units[0].z == pytest.approx(-8.7)
+    assert state.skipped_lines == 1
+
+
 def test_nan_and_inf_positions_are_skipped() -> None:
     text = "\n".join(
         [
