@@ -1,4 +1,5 @@
 tests/fixtures/orders_example.txt text eol=lf
 tests/fixtures/orders_release_example.txt text eol=lf
+tests/fixtures/reports/*.txt text eol=lf
 # Real game output: keep the bytes (CRLF) so parsers are tested on what Lua writes
 tests/fixtures/state_*.txt -text

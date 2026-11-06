@@ -1,0 +1,19 @@
+tick 20
+ours a2 men 816/? units 7 skipped 0
+a2.1.1 ? 24 men (-2,-9) ok near a1.1.4 373m N
+a2.1.2 ? 32 men (15,-356) ok near a1.1.4 721m N
+a2.1.3 ? 160 men (-30,-360) ok near a1.1.4 725m N
+a2.1.4 ? 120 men (-7,-357) ok near a1.1.4 721m N
+a2.1.5 ? 160 men (6,-359) ok near a1.1.4 723m N
+a2.1.6 ? 160 men (-19,-360) ok near a1.1.4 724m N
+a2.1.7 ? 160 men (31,-359) ok near a1.1.5 724m N
+enemy a1 men 588/? units 6 skipped 0
+a1.1.1 ? 24 men (0,455) ok
+a1.1.2 ? 60 men (250,396) ok
+a1.1.3 ? 160 men (-60,366) ok
+a1.1.4 ? 160 men (0,364) ok
+a1.1.5 ? 160 men (60,364) ok
+a1.1.6 ? 24 men (-200,380) ok
+within150: none
+cav300: none
+below50: none
