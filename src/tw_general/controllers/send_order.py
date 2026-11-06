@@ -1,12 +1,9 @@
 import argparse
-import os
 import sys
-from pathlib import Path
 
+from tw_general.controllers.game_dir import resolve_game_dir
 from tw_general.repositories.orders_file import OrdersFileRepository
 from tw_general.services.order_service import OrderService
-
-_DEFAULT_GAME_DIR = Path(r"D:\SteamLibrary\steamapps\common\Napoleon Total War")
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -28,19 +25,10 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _game_dir(argument: str | None) -> Path:
-    if argument:
-        return Path(argument)
-    from_env = os.environ.get("TWLLM_GAME_DIR")
-    if from_env:
-        return Path(from_env)
-    return _DEFAULT_GAME_DIR
-
-
 def main(argv: list[str] | None = None) -> None:
     parser = _parser()
     args = parser.parse_args(argv)
-    game_dir = _game_dir(args.game_dir)
+    game_dir = resolve_game_dir(args.game_dir)
     if not game_dir.is_dir():
         print(f"Game directory does not exist: {game_dir}", file=sys.stderr)
         raise SystemExit(2)
